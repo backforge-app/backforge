@@ -1,0 +1,34 @@
+env: "development"
+
+http:
+  port: ":8080"
+  read_timeout: "10s"
+  write_timeout: "10s"
+  idle_timeout: "60s"
+  shutdown_timeout: "8s"
+
+telegram:
+  debug: true
+
+auth:
+  access_token_ttl: "30m"
+  refresh_token_ttl: "168h"     # 7 days
+
+postgres:
+  connection_url: ""
+  host: "localhost"
+  port: 5432
+  ssl_mode: "disable"
+  pool:
+    max_conns: 15
+    min_conns: 2
+    max_conn_lifetime: "30m"
+
+client:
+  url: "http://localhost:5173"   # vite dev server
+
+api:
+  url: "http://localhost:8080"
+
+logging:
+  level: "info"                 # debug / info / warn / error
