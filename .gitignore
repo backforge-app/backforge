@@ -1,19 +1,56 @@
-# OS
-.DS_Store
-Thumbs.db
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+go.work
+go.work.sum
+vendor/
 
-# Env
+# Node / Frontend build artifacts
+node_modules/
+dist/
+build/
+.tmp/
+.vite/
+
+# Environment / Secrets
 .env
 .env.local
+.env.*.local
+*.env.backup
 
 # Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# IDE
-.vscode/
+# IDE / Editor
 .idea/
+.vscode/
+*.sublime-*
+*.swp
+*.swo
 
-# Build
-dist/
-build/
-tmp/
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.bak
+*.tmp
+~*
+
+# Migrations / tools artifacts
+migrations/*.backup
