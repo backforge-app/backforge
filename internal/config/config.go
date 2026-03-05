@@ -11,9 +11,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	ErrMissingEnvVar = errors.New("missing required environment variable")
-)
+// ErrMissingEnvVar is returned when a required environment variable is not set.
+var ErrMissingEnvVar = errors.New("missing required environment variable")
 
 // Config holds all application configuration parameters.
 type Config struct {
@@ -81,53 +80,9 @@ type Logging struct {
 // Load reads configuration from file, environment variables and defaults.
 // It returns fully populated Config or an error.
 func Load() (*Config, error) {
-	v := viper.New()
-
-	v.SetConfigName("config")
-	v.SetConfigType("yaml")
-	v.AddConfigPath("./config")
-	v.AddConfigPath(".")
-
-	// Default values
-	v.SetDefault("env", "development")
-
-	// HTTP defaults
-	v.SetDefault("http.port", ":8080")
-	v.SetDefault("http.read_timeout", "10s")
-	v.SetDefault("http.write_timeout", "10s")
-	v.SetDefault("http.idle_timeout", "60s")
-	v.SetDefault("http.shutdown_timeout", "8s")
-
-	// Telegram defaults
-	v.SetDefault("telegram.debug", false)
-
-	// Auth defaults
-	v.SetDefault("auth.access_token_ttl", "30m")
-	v.SetDefault("auth.refresh_token_ttl", "168h")
-
-	// Postgres defaults
-	v.SetDefault("postgres.host", "localhost")
-	v.SetDefault("postgres.port", 5432)
-	v.SetDefault("postgres.ssl_mode", "disable")
-	v.SetDefault("postgres.pool.max_conns", 15)
-	v.SetDefault("postgres.pool.min_conns", 2)
-	v.SetDefault("postgres.pool.max_conn_lifetime", "30m")
-
-	// Logging defaults
-	v.SetDefault("logging.level", "info")
-
-	// Enable environment variables support
-	v.SetEnvPrefix("APP")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
-
-	// Try to read config file (not required)
-	if err := v.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if !errors.As(err, &configFileNotFoundError) {
-			return nil, fmt.Errorf("cannot read config file: %w", err)
-		}
-		// file not found → continue with defaults + env
+	v := initViper()
+	if err := readConfigFile(v); err != nil {
+		return nil, err
 	}
 
 	var cfg Config
@@ -135,25 +90,81 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("cannot unmarshal config: %w", err)
 	}
 
-	// Load sensitive values only from environment
+	loadSensitiveValues(v, &cfg)
+
+	if err := validateRequired(&cfg); err != nil {
+		return nil, err
+	}
+
+	if err := validatePostgres(&cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
+func initViper() *viper.Viper {
+	v := viper.New()
+
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath("./config")
+	v.AddConfigPath(".")
+
+	// Defaults
+	v.SetDefault("env", "development")
+	v.SetDefault("http.port", ":8080")
+	v.SetDefault("http.read_timeout", "10s")
+	v.SetDefault("http.write_timeout", "10s")
+	v.SetDefault("http.idle_timeout", "60s")
+	v.SetDefault("http.shutdown_timeout", "8s")
+
+	v.SetDefault("telegram.debug", false)
+	v.SetDefault("auth.access_token_ttl", "30m")
+	v.SetDefault("auth.refresh_token_ttl", "168h")
+	v.SetDefault("postgres.host", "localhost")
+	v.SetDefault("postgres.port", 5432)
+	v.SetDefault("postgres.ssl_mode", "disable")
+	v.SetDefault("postgres.pool.max_conns", 15)
+	v.SetDefault("postgres.pool.min_conns", 2)
+	v.SetDefault("postgres.pool.max_conn_lifetime", "30m")
+	v.SetDefault("logging.level", "info")
+
+	// Environment
+	v.SetEnvPrefix("APP")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	return v
+}
+
+func readConfigFile(v *viper.Viper) error {
+	if err := v.ReadInConfig(); err != nil {
+		var cfgNotFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &cfgNotFound) {
+			return fmt.Errorf("cannot read config file: %w", err)
+		}
+		// not found → continue
+	}
+	return nil
+}
+
+func loadSensitiveValues(v *viper.Viper, cfg *Config) {
 	cfg.Telegram.Token = v.GetString("telegram_bot_token")
 	cfg.Telegram.Debug = v.GetBool("telegram.debug")
-
 	cfg.Auth.JWTSecret = v.GetString("jwt_secret")
-
 	cfg.Postgres.User = v.GetString("postgres_user")
 	cfg.Postgres.Password = v.GetString("postgres_password")
 	cfg.Postgres.Database = v.GetString("postgres_db")
 
-	// Prefer DATABASE_URL if provided
 	if dbURL := v.GetString("database_url"); dbURL != "" {
 		cfg.Postgres.ConnectionURL = dbURL
 	}
 
-	// Override logging level if set via env
 	cfg.Logging.Level = v.GetString("logging.level")
+}
 
-	// Required fields validation
+func validateRequired(cfg *Config) error {
 	required := map[string]string{
 		"Telegram Token":   cfg.Telegram.Token,
 		"JWT Secret":       cfg.Auth.JWTSecret,
@@ -164,14 +175,17 @@ func Load() (*Config, error) {
 
 	for name, val := range required {
 		if val == "" {
-			return nil, fmt.Errorf("%w: %s (APP_TELEGRAM_BOT_TOKEN / APP_JWT_SECRET / ...)", ErrMissingEnvVar, name)
+			return fmt.Errorf("%w: %s (APP_TELEGRAM_BOT_TOKEN / APP_JWT_SECRET / ...)", ErrMissingEnvVar, name)
 		}
 	}
 
-	// Postgres connection validation
-	if cfg.Postgres.ConnectionURL == "" && (cfg.Postgres.Host == "" || cfg.Postgres.Database == "") {
-		return nil, errors.New("postgres: need either connection_url or host+database+user+password")
-	}
+	return nil
+}
 
-	return &cfg, nil
+func validatePostgres(cfg *Config) error {
+	if cfg.Postgres.ConnectionURL == "" &&
+		(cfg.Postgres.Host == "" || cfg.Postgres.Database == "") {
+		return errors.New("postgres: need either connection_url or host+database+user+password")
+	}
+	return nil
 }
