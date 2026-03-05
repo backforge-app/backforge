@@ -9,7 +9,6 @@ linters:
     - errcheck
     - exhaustive
     - forcetypeassert
-    - funlen
     - gochecknoinits
     - goconst
     - gocritic
@@ -37,8 +36,15 @@ linters:
       locale: US
     staticcheck:
       checks: [ "all" ]
-    funlen:
-
+    revive:
+      rules:
+        - name: import-alias-naming
+          severity: warning
+          disabled: false
+          exclude: [ "" ]
+          arguments:
+            - allow-regex: "^[a-z][a-z0-9]*$"
+              deny-regex: '^v\d+$'
 
 formatters:
   enable:
