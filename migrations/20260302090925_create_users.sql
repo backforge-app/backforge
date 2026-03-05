@@ -4,19 +4,21 @@ CREATE TYPE user_role AS ENUM ('user', 'admin');
 
 CREATE TABLE IF NOT EXISTS users
 (
-    id            uuid PRIMARY KEY       DEFAULT gen_random_uuid(),
+    id             uuid PRIMARY KEY       DEFAULT gen_random_uuid(),
 
-    tg_user_id    bigint UNIQUE NOT NULL,
-    tg_username   varchar(32),
-    tg_first_name varchar(64),
-    tg_last_name  varchar(64),
+    tg_user_id     bigint UNIQUE NOT NULL,
+    tg_username    varchar(32),
+    tg_first_name  varchar(64),
+    tg_last_name   varchar(64),
 
-    role          user_role     NOT NULL DEFAULT 'user',
+    role           user_role     NOT NULL DEFAULT 'user',
 
-    is_premium    boolean                DEFAULT FALSE,
+    is_pro         boolean       NOT NULL DEFAULT FALSE,
+    pro_granted_at timestamptz,
+    pro_type       varchar(32)            DEFAULT 'channel',
 
-    created_at    timestamptz   NOT NULL DEFAULT now(),
-    updated_at    timestamptz   NOT NULL DEFAULT now()
+    created_at     timestamptz   NOT NULL DEFAULT now(),
+    updated_at     timestamptz   NOT NULL DEFAULT now()
 );
 -- +goose StatementEnd
 

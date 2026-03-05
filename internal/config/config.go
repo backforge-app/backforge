@@ -1,5 +1,6 @@
-// Package config provides application configuration loading using viper.
-// It supports YAML configuration file, environment variables and defaults.
+// Package config provides application configuration loading and validation.
+// It reads configuration from YAML files, environment variables, and defaults,
+// and exposes a fully populated Config struct for use across the application.
 package config
 
 import (
