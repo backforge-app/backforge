@@ -46,7 +46,7 @@ type Telegram struct {
 type Auth struct {
 	AccessTokenTTL  time.Duration `mapstructure:"access_token_ttl"`
 	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
-	JWTSecret       string        `mapstructure:"-"`
+	Secret          string        `mapstructure:"-"`
 }
 
 // Postgres contains PostgreSQL connection and pool settings.
@@ -153,7 +153,7 @@ func readConfigFile(v *viper.Viper) error {
 func loadSensitiveValues(v *viper.Viper, cfg *Config) {
 	cfg.Telegram.Token = v.GetString("telegram_bot_token")
 	cfg.Telegram.Debug = v.GetBool("telegram.debug")
-	cfg.Auth.JWTSecret = v.GetString("jwt_secret")
+	cfg.Auth.Secret = v.GetString("jwt_secret")
 	cfg.Postgres.User = v.GetString("postgres_user")
 	cfg.Postgres.Password = v.GetString("postgres_password")
 	cfg.Postgres.Database = v.GetString("postgres_db")
@@ -168,7 +168,7 @@ func loadSensitiveValues(v *viper.Viper, cfg *Config) {
 func validateRequired(cfg *Config) error {
 	required := map[string]string{
 		"Telegram Token":   cfg.Telegram.Token,
-		"JWT Secret":       cfg.Auth.JWTSecret,
+		"Secret":           cfg.Auth.Secret,
 		"Postgres DB name": cfg.Postgres.Database,
 		"Postgres User":    cfg.Postgres.User,
 		"Client URL":       cfg.Client.URL,
