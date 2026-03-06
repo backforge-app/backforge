@@ -16,4 +16,12 @@ var (
 	// ErrUserInvalidRole is returned when a user role value does not match any of the allowed
 	// values defined in the user_role enum type.
 	ErrUserInvalidRole = errors.New("invalid user role")
+
+	// ErrRefreshTokenNotFound is returned when the provided refresh token does not exist
+	// in the database or has been deleted.
+	ErrRefreshTokenNotFound = errors.New("refresh token not found")
+
+	// ErrRefreshTokenAlreadyExists is returned when attempting to create a refresh token
+	// that violates the unique constraint on the token field.
+	ErrRefreshTokenAlreadyExists = errors.New("refresh token already exists")
 )
