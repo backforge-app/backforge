@@ -20,12 +20,13 @@ const (
 
 // User represents a user entity in the system.
 type User struct {
-	ID uuid.UUID
+	ID         uuid.UUID
+	TelegramID int64
 
-	TgUserID    int64
-	TgUsername  *string
-	TgFirstName string
-	TgLastName  *string
+	FirstName string
+	LastName  *string
+	Username  *string
+	PhotoURL  *string
 
 	Role UserRole
 
@@ -39,20 +40,21 @@ type User struct {
 
 // NewUser creates a new User instance with the provided details.
 func NewUser(
-	tgUserID int64,
+	telegramID int64,
 	firstName string,
-	lastName, username *string,
+	lastName, username, photoURL *string,
 	isPro bool,
 ) *User {
 	now := time.Now().UTC()
 	proType := "channel"
 
 	u := &User{
-		TgUserID:    tgUserID,
-		TgFirstName: firstName,
-		TgLastName:  lastName,
-		TgUsername:  username,
-		IsPro:       isPro,
+		TelegramID: telegramID,
+		FirstName:  firstName,
+		LastName:   lastName,
+		Username:   username,
+		PhotoURL:   photoURL,
+		IsPro:      isPro,
 	}
 
 	if isPro {

@@ -6,12 +6,14 @@ package postgres
 import "errors"
 
 var (
-	// ErrUserNotFound is returned when the requested user does not exist.
+	// ErrUserNotFound is returned when the requested user does not exist in the database.
 	ErrUserNotFound = errors.New("user not found")
 
-	// ErrUserTgUserIDTaken is returned when the Telegram user ID is already in use.
-	ErrUserTgUserIDTaken = errors.New("telegram user ID already taken")
+	// ErrUserTelegramIDTaken is returned when attempting to create a user with a Telegram user ID
+	// that is already associated with another user account.
+	ErrUserTelegramIDTaken = errors.New("telegram user ID already taken")
 
-	// ErrUserInvalidRole is returned when an invalid user role is provided.
+	// ErrUserInvalidRole is returned when a user role value does not match any of the allowed
+	// values defined in the user_role enum type.
 	ErrUserInvalidRole = errors.New("invalid user role")
 )

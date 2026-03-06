@@ -1,6 +1,7 @@
 // Package postgres provides PostgreSQL infrastructure components.
 // It includes connection pool setup, transaction handling, repository-level errors
-// and repository implementations for accessing database entities like users.
+// and repository implementations for accessing database entities like users,
+// refresh tokens, questions etc.
 package postgres
 
 import (
@@ -14,41 +15,46 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/backforge-app/backforge/internal/domain"
+	"github.com/backforge-app/backforge/pkg/transactor"
 )
 
 // UserRepository is the repository for user-related operations.
 type UserRepository struct {
-	db DBTX
+	db transactor.DBTx
 }
 
 // NewUserRepository creates a new User repository.
-func NewUserRepository(db DBTX) *UserRepository {
+func NewUserRepository(db transactor.DBTx) *UserRepository {
 	return &UserRepository{db: db}
 }
 
 // Create inserts a new user into the database and returns its ID.
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) (uuid.UUID, error) {
+	db := transactor.GetDB(ctx, r.db)
+
 	const q = `
 		INSERT INTO users (
-			tg_user_id,
-			tg_username,
-			tg_first_name,
-			tg_last_name,
+			telegram_id,
+			username,
+			first_name,
+			last_name,
+		    photo_url,
 			role,
 			is_pro,
 			pro_granted_at,
 			pro_type
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
 	`
 
 	var id uuid.UUID
 
-	err := r.db.QueryRow(ctx, q,
-		user.TgUserID,
-		user.TgUsername,
-		user.TgFirstName,
-		user.TgLastName,
+	err := db.QueryRow(ctx, q,
+		user.TelegramID,
+		user.Username,
+		user.FirstName,
+		user.LastName,
+		user.PhotoURL,
 		user.Role,
 		user.IsPro,
 		user.ProGrantedAt,
@@ -61,7 +67,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) (uuid.UU
 			switch pgErr.Code {
 			case pgerrcode.UniqueViolation:
 				if pgErr.ConstraintName == "users_tg_user_id_key" {
-					return uuid.Nil, ErrUserTgUserIDTaken
+					return uuid.Nil, ErrUserTelegramIDTaken
 				}
 			case pgerrcode.InvalidTextRepresentation, pgerrcode.InvalidParameterValue:
 				return uuid.Nil, ErrUserInvalidRole
@@ -73,15 +79,18 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) (uuid.UU
 	return id, nil
 }
 
-// GetByTgUserID retrieves a user by their Telegram user ID.
-func (r *UserRepository) GetByTgUserID(ctx context.Context, tgUserID int64) (*domain.User, error) {
+// GetByTelegramID retrieves a user by their Telegram user ID.
+func (r *UserRepository) GetByTelegramID(ctx context.Context, telegramID int64) (*domain.User, error) {
+	db := transactor.GetDB(ctx, r.db)
+
 	const q = `
 		SELECT 
 			id,
-			tg_user_id,
-			tg_username,
-			tg_first_name,
-			tg_last_name,
+			telegram_id,
+			username,
+			first_name,
+			last_name,
+			photo_url,
 			role,
 			is_pro,
 			pro_granted_at,
@@ -89,17 +98,18 @@ func (r *UserRepository) GetByTgUserID(ctx context.Context, tgUserID int64) (*do
 			created_at,
 			updated_at
 		FROM users
-		WHERE tg_user_id = $1
+		WHERE telegram_id = $1
 	`
 
 	var user domain.User
 
-	err := r.db.QueryRow(ctx, q, tgUserID).Scan(
+	err := db.QueryRow(ctx, q, telegramID).Scan(
 		&user.ID,
-		&user.TgUserID,
-		&user.TgUsername,
-		&user.TgFirstName,
-		&user.TgLastName,
+		&user.TelegramID,
+		&user.Username,
+		&user.FirstName,
+		&user.LastName,
+		&user.PhotoURL,
 		&user.Role,
 		&user.IsPro,
 		&user.ProGrantedAt,
@@ -120,13 +130,16 @@ func (r *UserRepository) GetByTgUserID(ctx context.Context, tgUserID int64) (*do
 
 // GetByID retrieves a user by their UUID.
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	db := transactor.GetDB(ctx, r.db)
+
 	const q = `
 		SELECT 
 			id,
-			tg_user_id,
-			tg_username,
-			tg_first_name,
-			tg_last_name,
+			telegram_id,
+			username,
+			first_name,
+			last_name,
+			photo_url,
 			role,
 			is_pro,
 			pro_granted_at,
@@ -139,12 +152,13 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Use
 
 	var user domain.User
 
-	err := r.db.QueryRow(ctx, q, id).Scan(
+	err := db.QueryRow(ctx, q, id).Scan(
 		&user.ID,
-		&user.TgUserID,
-		&user.TgUsername,
-		&user.TgFirstName,
-		&user.TgLastName,
+		&user.TelegramID,
+		&user.Username,
+		&user.FirstName,
+		&user.LastName,
+		&user.PhotoURL,
 		&user.Role,
 		&user.IsPro,
 		&user.ProGrantedAt,
@@ -166,25 +180,29 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Use
 // Update modifies an existing user's details.
 // Only updates fields that are typically changeable (username, names, role, pro-status).
 func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
+	db := transactor.GetDB(ctx, r.db)
+
 	const q = `
 		UPDATE users
 		SET
-			tg_username     = $2,
-			tg_first_name   = $3,
-			tg_last_name    = $4,
-			role            = $5,
-			is_pro          = $6,
-			pro_granted_at  = $7,
-			pro_type        = $8,
+			username     	= $2,
+			first_name   	= $3,
+			last_name    	= $4,
+			photo_url    	= $5,
+			role            = $6,
+			is_pro          = $7,
+			pro_granted_at  = $8,
+			pro_type        = $9,
 			updated_at      = now()
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.db.Exec(ctx, q,
+	cmdTag, err := db.Exec(ctx, q,
 		user.ID,
-		user.TgUsername,
-		user.TgFirstName,
-		user.TgLastName,
+		user.Username,
+		user.FirstName,
+		user.LastName,
+		user.PhotoURL,
 		user.Role,
 		user.IsPro,
 		user.ProGrantedAt,

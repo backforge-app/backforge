@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS user_topic_progress
     UNIQUE (user_id, topic_id)
 );
 
-CREATE INDEX idx_utp_user_id ON user_topic_progress(user_id);
+CREATE INDEX idx_utp_user_id ON user_topic_progress (user_id);
 -- +goose StatementEnd
 
 -- +goose Down

@@ -5,11 +5,12 @@ CREATE TYPE user_role AS ENUM ('user', 'admin');
 CREATE TABLE IF NOT EXISTS users
 (
     id             uuid PRIMARY KEY       DEFAULT gen_random_uuid(),
+    telegram_id    bigint UNIQUE NOT NULL,
 
-    tg_user_id     bigint UNIQUE NOT NULL,
-    tg_username    varchar(32),
-    tg_first_name  varchar(64),
-    tg_last_name   varchar(64),
+    username       varchar(32),
+    first_name     varchar(64),
+    last_name      varchar(64),
+    photo_url      text,
 
     role           user_role     NOT NULL DEFAULT 'user',
 
