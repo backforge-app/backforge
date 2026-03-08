@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS questions
 (
     id         uuid PRIMARY KEY     DEFAULT gen_random_uuid(),
 
-    title      text        NOT NULL,
+    title      text        NOT NULL UNIQUE,
     content    jsonb       NOT NULL,
     level      smallint    NOT NULL, -- 0 = beginner, 1 = medium, 2 = advanced
 
@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS questions
 );
 
 CREATE INDEX idx_questions_topic_id ON questions (topic_id);
-
 CREATE INDEX idx_questions_level ON questions (level);
 -- +goose StatementEnd
 
