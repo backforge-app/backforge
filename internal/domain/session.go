@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// RefreshToken represents a refresh token entity.
-type RefreshToken struct {
+// Session represents a session entity.
+type Session struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	Token     string
@@ -18,9 +18,9 @@ type RefreshToken struct {
 	UpdatedAt time.Time
 }
 
-// NewRefreshToken creates a new refresh token.
-func NewRefreshToken(userID uuid.UUID, token string, expiresAt time.Time) *RefreshToken {
-	return &RefreshToken{
+// NewSession creates a new session.
+func NewSession(userID uuid.UUID, token string, expiresAt time.Time) *Session {
+	return &Session{
 		UserID:    userID,
 		Token:     token,
 		ExpiresAt: expiresAt,

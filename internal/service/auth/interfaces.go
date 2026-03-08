@@ -13,7 +13,7 @@ import (
 	"github.com/backforge-app/backforge/internal/service/user"
 )
 
-//go:generate mockgen -package=auth -destination=mocks.go github.com/backforge-app/backforge/internal/service/auth UserProvider,RefreshTokenRepository,Transactor
+//go:generate mockgen -package=auth -destination=mocks.go github.com/backforge-app/backforge/internal/service/auth UserProvider,SessionRepository,Transactor
 
 // UserProvider defines methods for accessing and creating users.
 type UserProvider interface {
@@ -21,10 +21,10 @@ type UserProvider interface {
 	GetOrCreateByTelegramID(ctx context.Context, input user.CreateInput) (*domain.User, error)
 }
 
-// RefreshTokenRepository defines operations for managing refresh tokens.
-type RefreshTokenRepository interface {
-	Create(ctx context.Context, token *domain.RefreshToken) error
-	GetByToken(ctx context.Context, token string) (*domain.RefreshToken, error)
+// SessionRepository defines operations for managing sessions.
+type SessionRepository interface {
+	Create(ctx context.Context, s *domain.Session) error
+	GetByToken(ctx context.Context, token string) (*domain.Session, error)
 	Revoke(ctx context.Context, token string) error
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	"github.com/backforge-app/backforge/internal/infra/postgres"
+	"github.com/backforge-app/backforge/internal/repository"
 )
 
 func TestUser_Create(t *testing.T) {
@@ -86,7 +86,7 @@ func TestUser_Create(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, postgres.ErrUserTelegramIDTaken)
+					Return(uuid.Nil, repository.ErrUserTelegramIDTaken)
 			},
 			expectedID:  uuid.Nil,
 			expectedErr: ErrUserTelegramIDTaken,
@@ -99,7 +99,7 @@ func TestUser_Create(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, postgres.ErrUserInvalidRole)
+					Return(uuid.Nil, repository.ErrUserInvalidRole)
 			},
 			expectedID:  uuid.Nil,
 			expectedErr: ErrUserInvalidRole,
@@ -168,7 +168,7 @@ func TestUser_GetByID(t *testing.T) {
 			name: "Fail - user not found",
 			id:   userID,
 			mockSetup: func() {
-				repo.EXPECT().GetByID(ctx, userID).Return(nil, postgres.ErrUserNotFound)
+				repo.EXPECT().GetByID(ctx, userID).Return(nil, repository.ErrUserNotFound)
 			},
 			expectedRes: nil,
 			expectedErr: ErrUserNotFound,
@@ -233,7 +233,7 @@ func TestUser_GetByTelegramID(t *testing.T) {
 			name: "Fail - user not found",
 			tgID: telegramID,
 			mockSetup: func() {
-				repo.EXPECT().GetByTelegramID(ctx, telegramID).Return(nil, postgres.ErrUserNotFound)
+				repo.EXPECT().GetByTelegramID(ctx, telegramID).Return(nil, repository.ErrUserNotFound)
 			},
 			expectedRes: nil,
 			expectedErr: ErrUserNotFound,
@@ -312,7 +312,7 @@ func TestUser_GetOrCreateByTelegramID(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetByTelegramID(ctx, telegramID).
-					Return(nil, postgres.ErrUserNotFound)
+					Return(nil, repository.ErrUserNotFound)
 
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
@@ -339,7 +339,7 @@ func TestUser_GetOrCreateByTelegramID(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetByTelegramID(ctx, telegramID).
-					Return(nil, postgres.ErrUserNotFound)
+					Return(nil, repository.ErrUserNotFound)
 
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
@@ -352,7 +352,7 @@ func TestUser_GetOrCreateByTelegramID(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetByTelegramID(ctx, telegramID).
-					Return(nil, postgres.ErrUserNotFound)
+					Return(nil, repository.ErrUserNotFound)
 
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
@@ -446,7 +446,7 @@ func TestUser_Update(t *testing.T) {
 
 				repo.EXPECT().
 					GetByID(ctx, userID).
-					Return(nil, postgres.ErrUserNotFound)
+					Return(nil, repository.ErrUserNotFound)
 			},
 			wantErr: true,
 		},
@@ -526,7 +526,7 @@ func TestUser_UpdateProStatus(t *testing.T) {
 
 		repo.EXPECT().
 			GetByTelegramID(ctx, telegramID).
-			Return(nil, postgres.ErrUserNotFound)
+			Return(nil, repository.ErrUserNotFound)
 
 		err := svc.UpdateProStatus(ctx, telegramID, true)
 		require.ErrorIs(t, err, ErrUserNotFound)
