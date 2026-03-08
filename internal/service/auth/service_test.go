@@ -71,7 +71,7 @@ func TestAuth_LoginWithTelegram(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockUsers := NewMockUserProvider(ctrl)
-	mockRefresh := NewMockRefreshTokenRepository(ctrl)
+	mockRefresh := NewMockSessionRepository(ctrl)
 
 	authCfg := &config.Auth{
 		Secret:          "secret",
@@ -79,7 +79,7 @@ func TestAuth_LoginWithTelegram(t *testing.T) {
 		RefreshTokenTTL: 24 * time.Hour,
 	}
 
-	botToken := "bot-token" //nolint:gosec
+	botToken := "bot-token"
 
 	svc := NewService(mockUsers, mockRefresh, nil, authCfg, botToken)
 
@@ -190,7 +190,7 @@ func TestAuth_Refresh(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockUsers := NewMockUserProvider(ctrl)
-	mockRefresh := NewMockRefreshTokenRepository(ctrl)
+	mockRefresh := NewMockSessionRepository(ctrl)
 	mockTx := NewMockTransactor(ctrl)
 
 	authCfg := &config.Auth{
@@ -204,7 +204,7 @@ func TestAuth_Refresh(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	oldToken := "old-token"
-	rt := &domain.RefreshToken{
+	rt := &domain.Session{
 		Token:     oldToken,
 		UserID:    userID,
 		ExpiresAt: time.Now().Add(time.Hour),

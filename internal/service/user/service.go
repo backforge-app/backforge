@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	"github.com/backforge-app/backforge/internal/infra/postgres"
+	"github.com/backforge-app/backforge/internal/repository"
 )
 
 // Service manages user business operations and coordinates with the repository layer.
@@ -53,9 +53,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (uuid.UUID, err
 	id, err := s.userRepo.Create(ctx, user)
 	if err != nil {
 		switch {
-		case errors.Is(err, postgres.ErrUserTelegramIDTaken):
+		case errors.Is(err, repository.ErrUserTelegramIDTaken):
 			return uuid.Nil, ErrUserTelegramIDTaken
-		case errors.Is(err, postgres.ErrUserInvalidRole):
+		case errors.Is(err, repository.ErrUserInvalidRole):
 			return uuid.Nil, ErrUserInvalidRole
 		default:
 			return uuid.Nil, fmt.Errorf("create user: %w", err)
@@ -70,7 +70,7 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 	err := s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
 		user, err := s.userRepo.GetByID(txCtx, input.ID)
 		if err != nil {
-			if errors.Is(err, postgres.ErrUserNotFound) {
+			if errors.Is(err, repository.ErrUserNotFound) {
 				return ErrUserNotFound
 			}
 			return fmt.Errorf("get user: %w", err)
@@ -104,9 +104,9 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 
 		if err := s.userRepo.Update(txCtx, user); err != nil {
 			switch {
-			case errors.Is(err, postgres.ErrUserNotFound):
+			case errors.Is(err, repository.ErrUserNotFound):
 				return ErrUserNotFound
-			case errors.Is(err, postgres.ErrUserInvalidRole):
+			case errors.Is(err, repository.ErrUserInvalidRole):
 				return ErrUserInvalidRole
 			default:
 				return fmt.Errorf("update user: %w", err)
@@ -126,7 +126,7 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, postgres.ErrUserNotFound) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("get user by ID: %w", err)
@@ -138,7 +138,7 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, erro
 func (s *Service) GetByTelegramID(ctx context.Context, telegramID int64) (*domain.User, error) {
 	user, err := s.userRepo.GetByTelegramID(ctx, telegramID)
 	if err != nil {
-		if errors.Is(err, postgres.ErrUserNotFound) {
+		if errors.Is(err, repository.ErrUserNotFound) {
 			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("get user by Telegram ID: %w", err)
@@ -169,7 +169,7 @@ func (s *Service) UpdateProStatus(ctx context.Context, telegramID int64, isPro b
 	err := s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
 		user, err := s.userRepo.GetByTelegramID(txCtx, telegramID)
 		if err != nil {
-			if errors.Is(err, postgres.ErrUserNotFound) {
+			if errors.Is(err, repository.ErrUserNotFound) {
 				return ErrUserNotFound
 			}
 			return fmt.Errorf("get user: %w", err)

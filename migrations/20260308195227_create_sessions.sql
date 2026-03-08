@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS refresh_tokens
+CREATE TABLE IF NOT EXISTS sessions
 (
     id         uuid PRIMARY KEY     DEFAULT gen_random_uuid(),
 
@@ -14,11 +14,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens (user_id);
-CREATE INDEX idx_refresh_tokens_token ON refresh_tokens (token);
+CREATE INDEX idx_sessions_user_id ON sessions (user_id);
+CREATE INDEX idx_sessions_token ON sessions (token);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS sessions;
 -- +goose StatementEnd

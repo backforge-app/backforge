@@ -1,7 +1,7 @@
-// Package postgres provides PostgreSQL infrastructure components.
-// It includes connection pool setup, transaction handling, repository-level errors
-// and repository implementations for accessing database entities like users.
-package postgres
+// Package repository provides the repository layer for accessing database entities.
+// It includes PostgreSQL transaction handling, repository-level and repository
+// implementations for entities like users, sessions, questions, etc.
+package repository
 
 import "errors"
 
@@ -17,11 +17,11 @@ var (
 	// values defined in the user_role enum type.
 	ErrUserInvalidRole = errors.New("invalid user role")
 
-	// ErrRefreshTokenNotFound is returned when the provided refresh token does not exist
+	// ErrSessionNotFound is returned when the provided session does not exist
 	// in the database or has been deleted.
-	ErrRefreshTokenNotFound = errors.New("refresh token not found")
+	ErrSessionNotFound = errors.New("session not found")
 
-	// ErrRefreshTokenAlreadyExists is returned when attempting to create a refresh token
+	// ErrSessionAlreadyExists is returned when attempting to create a session
 	// that violates the unique constraint on the token field.
-	ErrRefreshTokenAlreadyExists = errors.New("refresh token already exists")
+	ErrSessionAlreadyExists = errors.New("session already exists")
 )

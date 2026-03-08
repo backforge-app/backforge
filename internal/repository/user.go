@@ -1,8 +1,7 @@
-// Package postgres provides PostgreSQL infrastructure components.
-// It includes connection pool setup, transaction handling, repository-level errors
-// and repository implementations for accessing database entities like users,
-// refresh tokens, questions etc.
-package postgres
+// Package repository provides the repository layer for accessing database entities.
+// It includes PostgreSQL transaction handling, repository-level and repository
+// implementations for entities like users, sessions, questions, etc.
+package repository
 
 import (
 	"context"
@@ -18,18 +17,18 @@ import (
 	"github.com/backforge-app/backforge/pkg/transactor"
 )
 
-// UserRepository is the repository for user-related operations.
-type UserRepository struct {
+// User is the repository for user-related operations.
+type User struct {
 	db transactor.DBTx
 }
 
 // NewUserRepository creates a new User repository.
-func NewUserRepository(db transactor.DBTx) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db transactor.DBTx) *User {
+	return &User{db: db}
 }
 
 // Create inserts a new user into the database and returns its ID.
-func (r *UserRepository) Create(ctx context.Context, user *domain.User) (uuid.UUID, error) {
+func (r *User) Create(ctx context.Context, user *domain.User) (uuid.UUID, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -80,7 +79,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) (uuid.UU
 }
 
 // GetByTelegramID retrieves a user by their Telegram user ID.
-func (r *UserRepository) GetByTelegramID(ctx context.Context, telegramID int64) (*domain.User, error) {
+func (r *User) GetByTelegramID(ctx context.Context, telegramID int64) (*domain.User, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -129,7 +128,7 @@ func (r *UserRepository) GetByTelegramID(ctx context.Context, telegramID int64) 
 }
 
 // GetByID retrieves a user by their UUID.
-func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (r *User) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -179,7 +178,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Use
 
 // Update modifies an existing user's details.
 // Only updates fields that are typically changeable (username, names, role, pro-status).
-func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
+func (r *User) Update(ctx context.Context, user *domain.User) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `

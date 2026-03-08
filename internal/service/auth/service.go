@@ -20,7 +20,7 @@ import (
 
 	"github.com/backforge-app/backforge/internal/config"
 	"github.com/backforge-app/backforge/internal/domain"
-	"github.com/backforge-app/backforge/internal/infra/postgres"
+	"github.com/backforge-app/backforge/internal/repository"
 	"github.com/backforge-app/backforge/internal/service/user"
 )
 
@@ -28,7 +28,7 @@ import (
 // and related token generation/validation.
 type Service struct {
 	users       UserProvider
-	refreshRepo RefreshTokenRepository
+	sessionRepo SessionRepository
 	transactor  Transactor
 	authConfig  *config.Auth
 	botToken    string
@@ -37,14 +37,14 @@ type Service struct {
 // NewService creates a new authentication service instance.
 func NewService(
 	users UserProvider,
-	refreshRepo RefreshTokenRepository,
+	sessionRepo SessionRepository,
 	transactor Transactor,
 	authConfig *config.Auth,
 	botToken string,
 ) *Service {
 	return &Service{
 		users:       users,
-		refreshRepo: refreshRepo,
+		sessionRepo: sessionRepo,
 		transactor:  transactor,
 		authConfig:  authConfig,
 		botToken:    botToken,
@@ -55,7 +55,10 @@ func NewService(
 // a new access token (JWT) and refresh token.
 //
 // If the user does not exist, it will be created automatically.
-func (s *Service) LoginWithTelegram(ctx context.Context, input TelegramLoginInput) (accessToken, refreshToken string, err error) {
+func (s *Service) LoginWithTelegram(
+	ctx context.Context,
+	input TelegramLoginInput,
+) (accessToken, refreshToken string, err error) {
 	if err := s.validateTelegramAuth(input); err != nil {
 		return "", "", err
 	}
@@ -93,23 +96,23 @@ func (s *Service) Refresh(ctx context.Context, oldToken string) (newAccessToken,
 	var refreshToken string
 
 	err = s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
-		rt, err := s.refreshRepo.GetByToken(txCtx, oldToken)
+		session, err := s.sessionRepo.GetByToken(txCtx, oldToken)
 		if err != nil {
-			if errors.Is(err, postgres.ErrRefreshTokenNotFound) {
+			if errors.Is(err, repository.ErrSessionNotFound) {
 				return ErrRefreshTokenInvalid
 			}
 			return fmt.Errorf("get refresh token: %w", err)
 		}
 
-		if rt.Revoked {
+		if session.Revoked {
 			return ErrRefreshTokenRevoked
 		}
 
-		if time.Now().After(rt.ExpiresAt) {
+		if time.Now().After(session.ExpiresAt) {
 			return ErrRefreshTokenInvalid
 		}
 
-		u, err := s.users.GetByID(txCtx, rt.UserID)
+		u, err := s.users.GetByID(txCtx, session.UserID)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
 		}
@@ -124,7 +127,7 @@ func (s *Service) Refresh(ctx context.Context, oldToken string) (newAccessToken,
 			return fmt.Errorf("generate refresh token: %w", err)
 		}
 
-		if err := s.refreshRepo.Revoke(txCtx, oldToken); err != nil {
+		if err := s.sessionRepo.Revoke(txCtx, oldToken); err != nil {
 			return fmt.Errorf("revoke old refresh token: %w", err)
 		}
 
@@ -165,10 +168,10 @@ func (s *Service) generateRefreshToken(ctx context.Context, userID uuid.UUID) (s
 
 	expiresAt := time.Now().Add(s.authConfig.RefreshTokenTTL)
 
-	rt := domain.NewRefreshToken(userID, token, expiresAt)
+	session := domain.NewSession(userID, token, expiresAt)
 
-	if err := s.refreshRepo.Create(ctx, rt); err != nil {
-		return "", fmt.Errorf("create refresh token: %w", err)
+	if err := s.sessionRepo.Create(ctx, session); err != nil {
+		return "", fmt.Errorf("create session: %w", err)
 	}
 
 	return token, nil
