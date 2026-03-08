@@ -22,8 +22,8 @@ type User struct {
 	db transactor.DBTx
 }
 
-// NewUserRepository creates a new User repository.
-func NewUserRepository(db transactor.DBTx) *User {
+// NewUser creates a new User repository.
+func NewUser(db transactor.DBTx) *User {
 	return &User{db: db}
 }
 

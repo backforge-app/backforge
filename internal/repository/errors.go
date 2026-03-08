@@ -24,4 +24,11 @@ var (
 	// ErrSessionAlreadyExists is returned when attempting to create a session
 	// that violates the unique constraint on the token field.
 	ErrSessionAlreadyExists = errors.New("session already exists")
+
+	// ErrQuestionNotFound is returned when a question is not found in the database.
+	ErrQuestionNotFound = errors.New("question not found")
+
+	// ErrQuestionAlreadyExists is returned when attempting to create a question
+	// that violates unique constraints (if any).
+	ErrQuestionAlreadyExists = errors.New("question already exists")
 )

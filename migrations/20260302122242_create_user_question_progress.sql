@@ -16,11 +16,8 @@ CREATE TABLE IF NOT EXISTS user_question_progress
     UNIQUE (user_id, question_id)
 );
 
-CREATE INDEX idx_user_question_progress_user
-    ON user_question_progress (user_id);
-
-CREATE INDEX idx_user_question_progress_question
-    ON user_question_progress (question_id);
+CREATE INDEX idx_user_question_progress_user ON user_question_progress (user_id);
+CREATE INDEX idx_user_question_progress_question ON user_question_progress (question_id);
 -- +goose StatementEnd
 
 -- +goose Down
