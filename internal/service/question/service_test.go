@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	repository "github.com/backforge-app/backforge/internal/repository/question"
+	"github.com/backforge-app/backforge/internal/repository/question"
 )
 
 func TestQuestion_Create(t *testing.T) {
@@ -116,7 +116,7 @@ func TestQuestion_Create(t *testing.T) {
 
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, repository.ErrQuestionAlreadyExists)
+					Return(uuid.Nil, question.ErrQuestionAlreadyExists)
 			},
 			expectedErr: ErrQuestionAlreadyExists,
 		},
@@ -202,7 +202,7 @@ func TestQuestion_GetByID(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetByID(ctx, qID).
-					Return(nil, repository.ErrQuestionNotFound)
+					Return(nil, question.ErrQuestionNotFound)
 			},
 			expectedErr: ErrQuestionNotFound,
 		},
@@ -278,7 +278,7 @@ func TestQuestion_GetBySlug(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetBySlug(ctx, slug).
-					Return(nil, repository.ErrQuestionNotFound)
+					Return(nil, question.ErrQuestionNotFound)
 			},
 			expectedErr: ErrQuestionNotFound,
 		},
@@ -341,7 +341,7 @@ func TestQuestion_ListCards(t *testing.T) {
 	}
 
 	repo.EXPECT().
-		ListCards(ctx, repository.ListOptions{
+		ListCards(ctx, question.ListOptions{
 			Limit:   input.Limit,
 			Offset:  input.Offset,
 			Level:   input.Level,
@@ -506,7 +506,7 @@ func TestQuestion_Update(t *testing.T) {
 
 				repo.EXPECT().
 					GetByID(ctx, qID).
-					Return(nil, repository.ErrQuestionNotFound)
+					Return(nil, question.ErrQuestionNotFound)
 			},
 			wantErr: true,
 		},

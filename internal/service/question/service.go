@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	repository "github.com/backforge-app/backforge/internal/repository/question"
+	"github.com/backforge-app/backforge/internal/repository/question"
 )
 
 // Service manages question business operations and coordinates with the repository layer.
@@ -59,7 +59,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (uuid.UUID, err
 	err := s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
 		id, err := s.questionRepo.Create(txCtx, q)
 		if err != nil {
-			if errors.Is(err, repository.ErrQuestionAlreadyExists) {
+			if errors.Is(err, question.ErrQuestionAlreadyExists) {
 				return ErrQuestionAlreadyExists
 			}
 			return fmt.Errorf("create question: %w", err)
@@ -90,7 +90,7 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 	return s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
 		q, err := s.questionRepo.GetByID(txCtx, input.ID)
 		if err != nil {
-			if errors.Is(err, repository.ErrQuestionNotFound) {
+			if errors.Is(err, question.ErrQuestionNotFound) {
 				return ErrQuestionNotFound
 			}
 			return fmt.Errorf("get question: %w", err)
@@ -103,10 +103,10 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 		q.UpdatedAt = time.Now().UTC()
 
 		if err := s.questionRepo.Update(txCtx, q); err != nil {
-			if errors.Is(err, repository.ErrQuestionNotFound) {
+			if errors.Is(err, question.ErrQuestionNotFound) {
 				return ErrQuestionNotFound
 			}
-			if errors.Is(err, repository.ErrQuestionAlreadyExists) {
+			if errors.Is(err, question.ErrQuestionAlreadyExists) {
 				return ErrQuestionAlreadyExists
 			}
 			return fmt.Errorf("update question: %w", err)
@@ -165,7 +165,7 @@ func replaceQuestionTags(ctx context.Context, repo TagRepository, questionID uui
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, error) {
 	q, err := s.questionRepo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrQuestionNotFound) {
+		if errors.Is(err, question.ErrQuestionNotFound) {
 			return nil, ErrQuestionNotFound
 		}
 		return nil, fmt.Errorf("get question by ID: %w", err)
@@ -177,7 +177,7 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, 
 func (s *Service) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
 	q, err := s.questionRepo.GetBySlug(ctx, slug)
 	if err != nil {
-		if errors.Is(err, repository.ErrQuestionNotFound) {
+		if errors.Is(err, question.ErrQuestionNotFound) {
 			return nil, ErrQuestionNotFound
 		}
 		return nil, fmt.Errorf("get question by slug: %w", err)
@@ -187,7 +187,7 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (*domain.Question,
 
 // ListCards returns question cards with tags and "IsNew" flag, with pagination and filtering.
 func (s *Service) ListCards(ctx context.Context, input ListInput) ([]*domain.QuestionCard, error) {
-	opts := repository.ListOptions{
+	opts := question.ListOptions{
 		Limit:   input.Limit,
 		Offset:  input.Offset,
 		Level:   input.Level,

@@ -20,7 +20,7 @@ import (
 
 	"github.com/backforge-app/backforge/internal/config"
 	"github.com/backforge-app/backforge/internal/domain"
-	repository "github.com/backforge-app/backforge/internal/repository/session"
+	sessionrepo "github.com/backforge-app/backforge/internal/repository/session"
 	"github.com/backforge-app/backforge/internal/service/user"
 )
 
@@ -98,7 +98,7 @@ func (s *Service) Refresh(ctx context.Context, oldToken string) (newAccessToken,
 	err = s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
 		session, err := s.sessionRepo.GetByToken(txCtx, oldToken)
 		if err != nil {
-			if errors.Is(err, repository.ErrSessionNotFound) {
+			if errors.Is(err, sessionrepo.ErrSessionNotFound) {
 				return ErrRefreshTokenInvalid
 			}
 			return fmt.Errorf("get refresh token: %w", err)
@@ -174,7 +174,7 @@ func (s *Service) generateRefreshToken(ctx context.Context, userID uuid.UUID) (s
 	session := domain.NewSession(userID, token, expiresAt)
 
 	if err := s.sessionRepo.Create(ctx, session); err != nil {
-		if errors.Is(err, repository.ErrSessionAlreadyExists) {
+		if errors.Is(err, sessionrepo.ErrSessionAlreadyExists) {
 			return "", ErrRefreshTokenAlreadyExists
 		}
 		return "", fmt.Errorf("create session: %w", err)

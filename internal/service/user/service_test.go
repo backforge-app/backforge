@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	repository "github.com/backforge-app/backforge/internal/repository/user"
+	"github.com/backforge-app/backforge/internal/repository/user"
 )
 
 func TestUser_Create(t *testing.T) {
@@ -86,7 +86,7 @@ func TestUser_Create(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, repository.ErrUserTelegramIDTaken)
+					Return(uuid.Nil, user.ErrUserTelegramIDTaken)
 			},
 			expectedID:  uuid.Nil,
 			expectedErr: ErrUserTelegramIDTaken,
@@ -99,7 +99,7 @@ func TestUser_Create(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, repository.ErrUserInvalidRole)
+					Return(uuid.Nil, user.ErrUserInvalidRole)
 			},
 			expectedID:  uuid.Nil,
 			expectedErr: ErrUserInvalidRole,
@@ -168,7 +168,7 @@ func TestUser_GetByID(t *testing.T) {
 			name: "Fail - user not found",
 			id:   userID,
 			mockSetup: func() {
-				repo.EXPECT().GetByID(ctx, userID).Return(nil, repository.ErrUserNotFound)
+				repo.EXPECT().GetByID(ctx, userID).Return(nil, user.ErrUserNotFound)
 			},
 			expectedRes: nil,
 			expectedErr: ErrUserNotFound,
@@ -188,15 +188,15 @@ func TestUser_GetByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			user, err := svc.GetByID(ctx, tt.id)
+			u, err := svc.GetByID(ctx, tt.id)
 
 			if tt.expectedErr != nil {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.expectedErr.Error())
-				assert.Nil(t, user)
+				assert.Nil(t, u)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedRes, user)
+				assert.Equal(t, tt.expectedRes, u)
 			}
 		})
 	}
@@ -233,7 +233,7 @@ func TestUser_GetByTelegramID(t *testing.T) {
 			name: "Fail - user not found",
 			tgID: telegramID,
 			mockSetup: func() {
-				repo.EXPECT().GetByTelegramID(ctx, telegramID).Return(nil, repository.ErrUserNotFound)
+				repo.EXPECT().GetByTelegramID(ctx, telegramID).Return(nil, user.ErrUserNotFound)
 			},
 			expectedRes: nil,
 			expectedErr: ErrUserNotFound,
@@ -253,15 +253,15 @@ func TestUser_GetByTelegramID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			user, err := svc.GetByTelegramID(ctx, tt.tgID)
+			u, err := svc.GetByTelegramID(ctx, tt.tgID)
 
 			if tt.expectedErr != nil {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.expectedErr.Error())
-				assert.Nil(t, user)
+				assert.Nil(t, u)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedRes, user)
+				assert.Equal(t, tt.expectedRes, u)
 			}
 		})
 	}
@@ -312,7 +312,7 @@ func TestUser_GetOrCreateByTelegramID(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetByTelegramID(ctx, telegramID).
-					Return(nil, repository.ErrUserNotFound)
+					Return(nil, user.ErrUserNotFound)
 
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
@@ -339,7 +339,7 @@ func TestUser_GetOrCreateByTelegramID(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetByTelegramID(ctx, telegramID).
-					Return(nil, repository.ErrUserNotFound)
+					Return(nil, user.ErrUserNotFound)
 
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
@@ -352,7 +352,7 @@ func TestUser_GetOrCreateByTelegramID(t *testing.T) {
 			mockSetup: func() {
 				repo.EXPECT().
 					GetByTelegramID(ctx, telegramID).
-					Return(nil, repository.ErrUserNotFound)
+					Return(nil, user.ErrUserNotFound)
 
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
@@ -370,15 +370,15 @@ func TestUser_GetOrCreateByTelegramID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			user, err := svc.GetOrCreateByTelegramID(ctx, input)
+			u, err := svc.GetOrCreateByTelegramID(ctx, input)
 
 			if tt.expectedErr != nil {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.expectedErr.Error())
-				assert.Nil(t, user)
+				assert.Nil(t, u)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expected, user)
+				assert.Equal(t, tt.expected, u)
 			}
 		})
 	}
@@ -446,7 +446,7 @@ func TestUser_Update(t *testing.T) {
 
 				repo.EXPECT().
 					GetByID(ctx, userID).
-					Return(nil, repository.ErrUserNotFound)
+					Return(nil, user.ErrUserNotFound)
 			},
 			wantErr: true,
 		},
@@ -526,7 +526,7 @@ func TestUser_UpdateProStatus(t *testing.T) {
 
 		repo.EXPECT().
 			GetByTelegramID(ctx, telegramID).
-			Return(nil, repository.ErrUserNotFound)
+			Return(nil, user.ErrUserNotFound)
 
 		err := svc.UpdateProStatus(ctx, telegramID, true)
 		require.ErrorIs(t, err, ErrUserNotFound)

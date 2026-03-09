@@ -179,39 +179,41 @@ func (r *Repository) Update(ctx context.Context, t *domain.Topic) error {
 	return nil
 }
 
-// List retrieves all topics.
-func (r *Repository) List(ctx context.Context) ([]*domain.Topic, error) {
+// ListRows retrieves all topics with question counts.
+// Optimized for displaying in a topic table in the UI.
+func (r *Repository) ListRows(ctx context.Context) ([]*domain.TopicRow, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
-		SELECT id, title, slug, description, created_by, updated_by, created_at, updated_at
-		FROM topics
-		ORDER BY created_at DESC
+		SELECT t.id, t.title, t.slug, COALESCE(q_count.count, 0) AS question_count
+		FROM topics t
+		LEFT JOIN (
+    		SELECT topic_id, COUNT(*) AS count
+    		FROM questions
+    		GROUP BY topic_id
+		) q_count ON q_count.topic_id = t.id
+		ORDER BY t.created_at DESC;
 	`
 
 	rows, err := db.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list topics: %w", err)
+		return nil, fmt.Errorf("failed to list topic rows: %w", err)
 	}
 	defer rows.Close()
 
-	var topics []*domain.Topic
+	var result []*domain.TopicRow
 	for rows.Next() {
-		var t domain.Topic
+		var row domain.TopicRow
 		if err := rows.Scan(
-			&t.ID,
-			&t.Title,
-			&t.Slug,
-			&t.Description,
-			&t.CreatedBy,
-			&t.UpdatedBy,
-			&t.CreatedAt,
-			&t.UpdatedAt,
+			&row.ID,
+			&row.Title,
+			&row.Slug,
+			&row.QuestionCount,
 		); err != nil {
-			return nil, fmt.Errorf("failed to scan topic: %w", err)
+			return nil, fmt.Errorf("failed to scan topic row: %w", err)
 		}
-		topics = append(topics, &t)
+		result = append(result, &row)
 	}
 
-	return topics, nil
+	return result, nil
 }
