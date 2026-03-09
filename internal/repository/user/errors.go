@@ -1,6 +1,6 @@
 // Package user provides the repository layer for accessing user entities.
-// It includes PostgreSQL operations, transaction handling, and methods to
-// create, read, update, and manage users.
+// It includes PostgreSQL operations, transaction handling, repository-level errors
+// and methods to create, read, update, and manage users.
 package user
 
 import "errors"

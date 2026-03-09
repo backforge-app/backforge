@@ -1,6 +1,6 @@
 // Package session provides the repository layer for accessing session entities.
-// It includes PostgreSQL operations, transaction handling, and methods to
-// create, read, update, and manage user sessions.
+// It includes PostgreSQL operations, transaction handling, repository-level errors
+// and methods to create, read, update, and manage user sessions.
 package session
 
 import "errors"

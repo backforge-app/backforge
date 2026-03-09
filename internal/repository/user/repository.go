@@ -1,6 +1,6 @@
 // Package user provides the repository layer for accessing user entities.
-// It includes PostgreSQL operations, transaction handling, and methods to
-// create, read, update, and manage users.
+// It includes PostgreSQL operations, transaction handling, repository-level errors
+// and methods to create, read, update, and manage users.
 package user
 
 import (
@@ -28,7 +28,7 @@ func NewRepository(db transactor.DBTx) *Repository {
 }
 
 // Create inserts a new user into the database and returns its ID.
-func (r *Repository) Create(ctx context.Context, user *domain.User) (uuid.UUID, error) {
+func (r *Repository) Create(ctx context.Context, u *domain.User) (uuid.UUID, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -49,15 +49,15 @@ func (r *Repository) Create(ctx context.Context, user *domain.User) (uuid.UUID, 
 	var id uuid.UUID
 
 	err := db.QueryRow(ctx, q,
-		user.TelegramID,
-		user.Username,
-		user.FirstName,
-		user.LastName,
-		user.PhotoURL,
-		user.Role,
-		user.IsPro,
-		user.ProGrantedAt,
-		user.ProType,
+		u.TelegramID,
+		u.Username,
+		u.FirstName,
+		u.LastName,
+		u.PhotoURL,
+		u.Role,
+		u.IsPro,
+		u.ProGrantedAt,
+		u.ProType,
 	).Scan(&id)
 
 	if err != nil {
@@ -65,7 +65,7 @@ func (r *Repository) Create(ctx context.Context, user *domain.User) (uuid.UUID, 
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
 			case pgerrcode.UniqueViolation:
-				if pgErr.ConstraintName == "users_tg_user_id_key" {
+				if pgErr.ConstraintName == "users_telegram_id_key" {
 					return uuid.Nil, ErrUserTelegramIDTaken
 				}
 			case pgerrcode.InvalidTextRepresentation, pgerrcode.InvalidParameterValue:
@@ -100,31 +100,12 @@ func (r *Repository) GetByTelegramID(ctx context.Context, telegramID int64) (*do
 		WHERE telegram_id = $1
 	`
 
-	var user domain.User
-
-	err := db.QueryRow(ctx, q, telegramID).Scan(
-		&user.ID,
-		&user.TelegramID,
-		&user.Username,
-		&user.FirstName,
-		&user.LastName,
-		&user.PhotoURL,
-		&user.Role,
-		&user.IsPro,
-		&user.ProGrantedAt,
-		&user.ProType,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
+	u, err := scanUser(db.QueryRow(ctx, q, telegramID))
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by tg_user_id: %w", err)
+		return nil, fmt.Errorf("failed to get user by telegram id: %w", err)
 	}
 
-	return &user, nil
+	return u, nil
 }
 
 // GetByID retrieves a user by their UUID.
@@ -149,36 +130,45 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, e
 		WHERE id = $1
 	`
 
-	var user domain.User
+	u, err := scanUser(db.QueryRow(ctx, q, id))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by id: %w", err)
+	}
 
-	err := db.QueryRow(ctx, q, id).Scan(
-		&user.ID,
-		&user.TelegramID,
-		&user.Username,
-		&user.FirstName,
-		&user.LastName,
-		&user.PhotoURL,
-		&user.Role,
-		&user.IsPro,
-		&user.ProGrantedAt,
-		&user.ProType,
-		&user.CreatedAt,
-		&user.UpdatedAt,
+	return u, nil
+}
+
+func scanUser(row pgx.Row) (*domain.User, error) {
+	var u domain.User
+
+	err := row.Scan(
+		&u.ID,
+		&u.TelegramID,
+		&u.Username,
+		&u.FirstName,
+		&u.LastName,
+		&u.PhotoURL,
+		&u.Role,
+		&u.IsPro,
+		&u.ProGrantedAt,
+		&u.ProType,
+		&u.CreatedAt,
+		&u.UpdatedAt,
 	)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
-		return nil, fmt.Errorf("failed to get user by id: %w", err)
+		return nil, err
 	}
 
-	return &user, nil
+	return &u, nil
 }
 
 // Update modifies an existing user's details.
 // Only updates fields that are typically changeable (username, names, role, pro-status).
-func (r *Repository) Update(ctx context.Context, user *domain.User) error {
+func (r *Repository) Update(ctx context.Context, u *domain.User) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -197,15 +187,15 @@ func (r *Repository) Update(ctx context.Context, user *domain.User) error {
 	`
 
 	cmdTag, err := db.Exec(ctx, q,
-		user.ID,
-		user.Username,
-		user.FirstName,
-		user.LastName,
-		user.PhotoURL,
-		user.Role,
-		user.IsPro,
-		user.ProGrantedAt,
-		user.ProType,
+		u.ID,
+		u.Username,
+		u.FirstName,
+		u.LastName,
+		u.PhotoURL,
+		u.Role,
+		u.IsPro,
+		u.ProGrantedAt,
+		u.ProType,
 	)
 
 	if err != nil {

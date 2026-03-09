@@ -1,6 +1,6 @@
 // Package topic provides the repository layer for accessing topic entities.
-// It includes PostgreSQL operations, transaction handling, and methods to
-// create, read, update, and list topics.
+// It includes PostgreSQL operations, transaction handling, repository-level errors
+// and methods to create, read, update, and list topics.
 package topic
 
 import (
@@ -197,7 +197,7 @@ func (r *Repository) List(ctx context.Context) ([]*domain.Topic, error) {
 
 	var topics []*domain.Topic
 	for rows.Next() {
-		t := &domain.Topic{}
+		var t domain.Topic
 		if err := rows.Scan(
 			&t.ID,
 			&t.Title,
@@ -210,7 +210,7 @@ func (r *Repository) List(ctx context.Context) ([]*domain.Topic, error) {
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan topic: %w", err)
 		}
-		topics = append(topics, t)
+		topics = append(topics, &t)
 	}
 
 	return topics, nil
