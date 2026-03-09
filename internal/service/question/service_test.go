@@ -170,6 +170,75 @@ func TestQuestion_GetByID(t *testing.T) {
 	}
 }
 
+func TestQuestion_GetBySlug(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := NewMockRepository(ctrl)
+	svc := NewService(repo, nil)
+
+	ctx := context.Background()
+	slug := "test-question"
+	expectedQ := &domain.Question{
+		ID:    uuid.New(),
+		Title: "Test Question",
+		Slug:  slug,
+	}
+
+	tests := []struct {
+		name        string
+		slug        string
+		mockSetup   func()
+		expectedRes *domain.Question
+		expectedErr error
+	}{
+		{
+			name: "Success",
+			slug: slug,
+			mockSetup: func() {
+				repo.EXPECT().GetBySlug(ctx, slug).Return(expectedQ, nil)
+			},
+			expectedRes: expectedQ,
+			expectedErr: nil,
+		},
+		{
+			name: "Fail - not found",
+			slug: slug,
+			mockSetup: func() {
+				repo.EXPECT().GetBySlug(ctx, slug).Return(nil, repository.ErrQuestionNotFound)
+			},
+			expectedRes: nil,
+			expectedErr: ErrQuestionNotFound,
+		},
+		{
+			name: "Fail - general error",
+			slug: slug,
+			mockSetup: func() {
+				repo.EXPECT().GetBySlug(ctx, slug).Return(nil, errors.New("db down"))
+			},
+			expectedRes: nil,
+			expectedErr: errors.New("get question by slug: db down"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			q, err := svc.GetBySlug(ctx, tt.slug)
+
+			if tt.expectedErr != nil {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.expectedErr.Error())
+				assert.Nil(t, q)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedRes, q)
+			}
+		})
+	}
+}
+
 func TestQuestion_List(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

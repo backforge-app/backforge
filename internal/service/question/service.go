@@ -43,11 +43,12 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (uuid.UUID, err
 
 	q := domain.NewQuestion(
 		input.Title,
+		input.Slug,
 		input.Content,
 		input.Level,
 		input.TopicID,
-		input.CreatedBy,
 		input.IsFree,
+		input.CreatedBy,
 	)
 
 	id, err := s.questionRepo.Create(ctx, q)
@@ -76,6 +77,9 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 		// Apply updates if provided
 		if input.Title != nil {
 			q.Title = *input.Title
+		}
+		if input.Slug != nil {
+			q.Slug = *input.Slug
 		}
 		if input.Content != nil {
 			q.Content = input.Content
@@ -116,6 +120,18 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, 
 			return nil, ErrQuestionNotFound
 		}
 		return nil, fmt.Errorf("get question by ID: %w", err)
+	}
+	return q, nil
+}
+
+// GetBySlug retrieves a question by its slug.
+func (s *Service) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
+	q, err := s.questionRepo.GetBySlug(ctx, slug)
+	if err != nil {
+		if errors.Is(err, repository.ErrQuestionNotFound) {
+			return nil, ErrQuestionNotFound
+		}
+		return nil, fmt.Errorf("get question by slug: %w", err)
 	}
 	return q, nil
 }

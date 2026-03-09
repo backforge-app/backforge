@@ -67,6 +67,21 @@ func (mr *MockRepositoryMockRecorder) GetByID(arg0, arg1 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockRepository)(nil).GetByID), arg0, arg1)
 }
 
+// GetBySlug mocks base method.
+func (m *MockRepository) GetBySlug(arg0 context.Context, arg1 string) (*domain.Question, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBySlug", arg0, arg1)
+	ret0, _ := ret[0].(*domain.Question)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBySlug indicates an expected call of GetBySlug.
+func (mr *MockRepositoryMockRecorder) GetBySlug(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBySlug", reflect.TypeOf((*MockRepository)(nil).GetBySlug), arg0, arg1)
+}
+
 // List mocks base method.
 func (m *MockRepository) List(arg0 context.Context, arg1 repository.ListOptions) ([]*domain.Question, error) {
 	m.ctrl.T.Helper()

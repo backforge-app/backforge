@@ -40,19 +40,21 @@ func (r *Question) Create(ctx context.Context, q *domain.Question) (uuid.UUID, e
 	const query = `
 		INSERT INTO questions (
 			title,
+		    slug,
 			content,
 			level,
 			topic_id,
 			is_free,
 			created_by,
 			updated_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
 	`
 
 	var id uuid.UUID
 	err = db.QueryRow(ctx, query,
 		q.Title,
+		q.Slug,
 		contentJSON,
 		q.Level,
 		q.TopicID,
@@ -64,7 +66,7 @@ func (r *Question) Create(ctx context.Context, q *domain.Question) (uuid.UUID, e
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
-			pgErr.ConstraintName == "questions_title_key" {
+			pgErr.ConstraintName == "questions_slug_key" {
 			return uuid.Nil, ErrQuestionAlreadyExists
 		}
 		return uuid.Nil, fmt.Errorf("failed to create question: %w", err)
@@ -78,18 +80,66 @@ func (r *Question) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question,
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
-		SELECT id, title, content, level, topic_id, is_free, 
-		       created_by, updated_by, created_at, updated_at
+		SELECT 
+		    id, 
+		    title, 
+		    slug, 
+		    content, 
+		    level, 
+		    topic_id, 
+		    is_free, 
+		    created_by, 
+		    updated_by, 
+		    created_at, 
+		    updated_at
 		FROM questions
 		WHERE id = $1
 	`
 
+	q, err := scanQuestion(db.QueryRow(ctx, query, id))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get question by id: %w", err)
+	}
+
+	return q, nil
+}
+
+func (r *Question) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
+	db := transactor.GetDB(ctx, r.db)
+
+	const query = `
+		SELECT 
+			id,
+			title,
+			slug,
+			content,
+			level,
+			topic_id,
+			is_free,
+			created_by,
+			updated_by,
+			created_at,
+			updated_at
+		FROM questions
+		WHERE slug = $1
+	`
+
+	q, err := scanQuestion(db.QueryRow(ctx, query, slug))
+	if err != nil {
+		return nil, fmt.Errorf("get question by slug: %w", err)
+	}
+
+	return q, nil
+}
+
+func scanQuestion(row pgx.Row) (*domain.Question, error) {
 	var q domain.Question
 	var contentJSON []byte
 
-	err := db.QueryRow(ctx, query, id).Scan(
+	err := row.Scan(
 		&q.ID,
 		&q.Title,
+		&q.Slug,
 		&contentJSON,
 		&q.Level,
 		&q.TopicID,
@@ -99,16 +149,15 @@ func (r *Question) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question,
 		&q.CreatedAt,
 		&q.UpdatedAt,
 	)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrQuestionNotFound
 		}
-		return nil, fmt.Errorf("failed to get question by id: %w", err)
+		return nil, err
 	}
 
 	if err := json.Unmarshal(contentJSON, &q.Content); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal content: %w", err)
+		return nil, fmt.Errorf("unmarshal content: %w", err)
 	}
 
 	return &q, nil
@@ -129,11 +178,12 @@ func (r *Question) Update(ctx context.Context, q *domain.Question) error {
 		UPDATE questions
 		SET
 			title      = $2,
-			content    = $3,
-			level      = $4,
-			topic_id   = $5,
-			is_free    = $6,
-			updated_by = $7,
+			slug       = $3,
+			content    = $4,
+			level      = $5,
+			topic_id   = $6,
+			is_free    = $7,
+			updated_by = $8,
 			updated_at = now()
 		WHERE id = $1
 	`
@@ -141,6 +191,7 @@ func (r *Question) Update(ctx context.Context, q *domain.Question) error {
 	cmdTag, err := db.Exec(ctx, query,
 		q.ID,
 		q.Title,
+		q.Slug,
 		contentJSON,
 		q.Level,
 		q.TopicID,
@@ -152,7 +203,7 @@ func (r *Question) Update(ctx context.Context, q *domain.Question) error {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation &&
-				pgErr.ConstraintName == "questions_title_key" {
+				pgErr.ConstraintName == "questions_slug_key" {
 				return ErrQuestionAlreadyExists
 			}
 		}
@@ -179,7 +230,21 @@ type ListOptions struct {
 func (r *Question) List(ctx context.Context, opts ListOptions) ([]*domain.Question, error) {
 	db := transactor.GetDB(ctx, r.db)
 
-	query := `SELECT id, title, content, level, topic_id, is_free, created_by, updated_by, created_at, updated_at FROM questions WHERE 1=1`
+	query := `
+		SELECT 
+		    id, 
+		    title,
+		    slug,
+		    content, 
+		    level, 
+		    topic_id, 
+		    is_free, 
+		    created_by, 
+		    updated_by, 
+		    created_at, 
+		    updated_at 
+		FROM questions 
+		WHERE 1=1`
 	var args []interface{}
 	argID := 1
 
@@ -217,6 +282,7 @@ func (r *Question) List(ctx context.Context, opts ListOptions) ([]*domain.Questi
 		if err := rows.Scan(
 			&q.ID,
 			&q.Title,
+			&q.Slug,
 			&contentJSON,
 			&q.Level,
 			&q.TopicID,

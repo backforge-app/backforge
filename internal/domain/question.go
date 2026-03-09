@@ -24,6 +24,7 @@ const (
 type Question struct {
 	ID        uuid.UUID
 	Title     string
+	Slug      string
 	Content   map[string]interface{} // JSONB content stored as map
 	Level     QuestionLevel
 	TopicID   *uuid.UUID
@@ -35,21 +36,39 @@ type Question struct {
 }
 
 // NewQuestion creates a new Question instance with required fields.
-func NewQuestion(title string, content map[string]interface{}, level QuestionLevel, topicID, createdBy *uuid.UUID, isFree bool) *Question {
+func NewQuestion(
+	title string,
+	slug string,
+	content map[string]interface{},
+	level QuestionLevel,
+	topicID *uuid.UUID,
+	isFree bool,
+	createdBy *uuid.UUID,
+) *Question {
 	return &Question{
 		Title:     title,
+		Slug:      slug,
 		Content:   content,
 		Level:     level,
 		TopicID:   topicID,
-		CreatedBy: createdBy,
 		IsFree:    isFree,
+		CreatedBy: createdBy,
 	}
 }
 
 // Update modifies an existing question's mutable fields.
-// Only fields like Title, Content, Level, TopicID, IsFree, UpdatedBy can be updated.
-func (q *Question) Update(title string, content map[string]interface{}, level QuestionLevel, topicID *uuid.UUID, isFree bool, updatedBy *uuid.UUID) {
+// Only fields like Title, Slug, Content, Level, TopicID, IsFree, UpdatedBy can be updated.
+func (q *Question) Update(
+	title string,
+	slug string,
+	content map[string]interface{},
+	level QuestionLevel,
+	topicID *uuid.UUID,
+	isFree bool,
+	updatedBy *uuid.UUID,
+) {
 	q.Title = title
+	q.Slug = slug
 	q.Content = content
 	q.Level = level
 	q.TopicID = topicID

@@ -23,6 +23,7 @@ type Repository interface {
 	Create(ctx context.Context, q *domain.Question) (uuid.UUID, error)
 	Update(ctx context.Context, q *domain.Question) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, error)
+	GetBySlug(ctx context.Context, slug string) (*domain.Question, error)
 	List(ctx context.Context, opts repository.ListOptions) ([]*domain.Question, error)
 }
 
