@@ -19,6 +19,17 @@ const (
 	QuestionLevelAdvanced QuestionLevel = 2
 )
 
+// QuestionCard is a lightweight representation of a question,
+// typically used for listing, previews, search results and cards in UI.
+type QuestionCard struct {
+	ID    uuid.UUID
+	Title string
+	Slug  string
+	Level QuestionLevel
+	IsNew bool
+	Tags  []Tag
+}
+
 // Question represents a question entity in the system.
 // Questions belong to topics and can be free or restricted.
 type Question struct {
@@ -29,6 +40,7 @@ type Question struct {
 	Level     QuestionLevel
 	TopicID   *uuid.UUID
 	IsFree    bool
+	Tags      []*Tag
 	CreatedBy *uuid.UUID
 	UpdatedBy *uuid.UUID
 	CreatedAt time.Time

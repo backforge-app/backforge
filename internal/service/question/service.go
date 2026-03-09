@@ -1,10 +1,7 @@
-// Package question implements the Question application service.
+// Package question implements the application service layer for question management.
 //
-// It contains the business logic for managing questions, including
-// service methods, input DTOs, service-level errors,
-// repository interfaces and service-level tests.
-// The package coordinates domain entities with repository
-// implementations defined in the parent service layer.
+// It contains business logic, input DTOs (in other files), service-level errors,
+// repository interfaces, and coordinates domain entities with persistence layer.
 package question
 
 import (
@@ -22,13 +19,19 @@ import (
 // Service manages question business operations and coordinates with the repository layer.
 type Service struct {
 	questionRepo Repository
+	tagRepo      TagRepository
 	transactor   Transactor
 }
 
 // NewService creates a new service instance.
-func NewService(questionRepo Repository, transactor Transactor) *Service {
+func NewService(
+	questionRepo Repository,
+	tagRepo TagRepository,
+	transactor Transactor,
+) *Service {
 	return &Service{
 		questionRepo: questionRepo,
+		tagRepo:      tagRepo,
 		transactor:   transactor,
 	}
 }
@@ -51,15 +54,34 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (uuid.UUID, err
 		input.CreatedBy,
 	)
 
-	id, err := s.questionRepo.Create(ctx, q)
-	if err != nil {
-		if errors.Is(err, repository.ErrQuestionAlreadyExists) {
-			return uuid.Nil, ErrQuestionAlreadyExists
+	var questionID uuid.UUID
+
+	err := s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
+		id, err := s.questionRepo.Create(txCtx, q)
+		if err != nil {
+			if errors.Is(err, repository.ErrQuestionAlreadyExists) {
+				return ErrQuestionAlreadyExists
+			}
+			return fmt.Errorf("create question: %w", err)
 		}
-		return uuid.Nil, fmt.Errorf("create question: %w", err)
+
+		questionID = id
+
+		if len(input.TagIDs) > 0 {
+			err := s.tagRepo.AddTagsToQuestion(txCtx, id, input.TagIDs)
+			if err != nil {
+				return fmt.Errorf("attach tags: %w", err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return uuid.Nil, err
 	}
 
-	return id, nil
+	return questionID, nil
 }
 
 // Update modifies an existing question's details.
@@ -75,26 +97,8 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 		}
 
 		// Apply updates if provided
-		if input.Title != nil {
-			q.Title = *input.Title
-		}
-		if input.Slug != nil {
-			q.Slug = *input.Slug
-		}
-		if input.Content != nil {
-			q.Content = input.Content
-		}
-		if input.Level != nil {
-			q.Level = *input.Level
-		}
-		if input.TopicID != nil {
-			q.TopicID = input.TopicID
-		}
-		if input.IsFree != nil {
-			q.IsFree = *input.IsFree
-		}
-		if input.UpdatedBy != nil {
-			q.UpdatedBy = input.UpdatedBy
+		if err := applyUpdates(q, input, s.tagRepo, txCtx); err != nil {
+			return err
 		}
 		q.UpdatedAt = time.Now().UTC()
 
@@ -110,6 +114,51 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 
 		return nil
 	})
+}
+
+func applyUpdates(q *domain.Question, input UpdateInput, tagRepo TagRepository, ctx context.Context) error {
+	if input.Title != nil {
+		q.Title = *input.Title
+	}
+	if input.Slug != nil {
+		q.Slug = *input.Slug
+	}
+	if input.Content != nil {
+		q.Content = input.Content
+	}
+	if input.Level != nil {
+		q.Level = *input.Level
+	}
+	if input.TopicID != nil {
+		q.TopicID = input.TopicID
+	}
+	if input.IsFree != nil {
+		q.IsFree = *input.IsFree
+	}
+	if input.TagIDs != nil {
+		if err := replaceQuestionTags(ctx, tagRepo, q.ID, *input.TagIDs); err != nil {
+			return err
+		}
+	}
+	if input.UpdatedBy != nil {
+		q.UpdatedBy = input.UpdatedBy
+	}
+
+	return nil
+}
+
+func replaceQuestionTags(ctx context.Context, repo TagRepository, questionID uuid.UUID, newTagIDs []uuid.UUID) error {
+	if err := repo.RemoveAllForQuestion(ctx, questionID); err != nil {
+		return fmt.Errorf("remove existing tags: %w", err)
+	}
+	if len(newTagIDs) == 0 {
+		return nil
+	}
+	if err := repo.AddTagsToQuestion(ctx, questionID, newTagIDs); err != nil {
+		return fmt.Errorf("add tags: %w", err)
+	}
+
+	return nil
 }
 
 // GetByID retrieves a question by its unique identifier.
@@ -136,18 +185,29 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (*domain.Question,
 	return q, nil
 }
 
-// List retrieves a list of questions based on filters and pagination.
-func (s *Service) List(ctx context.Context, input ListInput) ([]*domain.Question, error) {
+// ListCards returns question cards with tags and "IsNew" flag, with pagination and filtering.
+func (s *Service) ListCards(ctx context.Context, input ListInput) ([]*domain.QuestionCard, error) {
 	opts := repository.ListOptions{
 		Limit:   input.Limit,
 		Offset:  input.Offset,
 		Level:   input.Level,
 		TopicID: input.TopicID,
 		IsFree:  input.IsFree,
+		TagIDs:  input.TagIDs,
 	}
-	questions, err := s.questionRepo.List(ctx, opts)
+	cards, err := s.questionRepo.ListCards(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("list questions: %w", err)
+		return nil, fmt.Errorf("list question cards: %w", err)
+	}
+	return cards, nil
+}
+
+// ListByTopic returns all questions of a given topic with full content and associated tags.
+// This is used for the topic page under the question cards.
+func (s *Service) ListByTopic(ctx context.Context, topicID uuid.UUID) ([]*domain.Question, error) {
+	questions, err := s.questionRepo.ListByTopic(ctx, topicID)
+	if err != nil {
+		return nil, fmt.Errorf("list questions by topic: %w", err)
 	}
 	return questions, nil
 }

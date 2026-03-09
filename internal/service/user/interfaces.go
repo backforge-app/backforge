@@ -1,10 +1,8 @@
-// Package user implements the User application service.
+// Package user implements the application service layer for user management.
 //
-// It contains the business logic for managing users, including
-// service methods, input DTOs, service-level errors,
-// repository interfaces and service-level tests.
-// The package coordinates domain entities with repository
-// implementations defined in the parent service layer.
+// It contains business logic for user creation, updates, retrieval,
+// service-level errors, input DTOs (in other files), and coordinates
+// domain entities with the persistence layer.
 package user
 
 import (
@@ -17,15 +15,24 @@ import (
 
 //go:generate mockgen -package=user -destination=mocks.go github.com/backforge-app/backforge/internal/service/user Repository,Transactor
 
-// Repository provides methods for managing user data in the repository.
+// Repository defines data access operations for User entities.
 type Repository interface {
+	// Create persists a new user and returns its generated ID.
 	Create(ctx context.Context, user *domain.User) (uuid.UUID, error)
+
+	// Update modifies an existing user's mutable fields.
 	Update(ctx context.Context, user *domain.User) error
+
+	// GetByTelegramID retrieves a user by their Telegram ID.
 	GetByTelegramID(ctx context.Context, telegramID int64) (*domain.User, error)
+
+	// GetByID retrieves a user by its unique identifier.
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 }
 
-// Transactor runs a function in a DB transaction.
+// Transactor provides transactional execution scope for database operations.
 type Transactor interface {
+	// WithinTx executes the given function inside a database transaction.
+	// The transaction is committed on success or rolled back on error/panic.
 	WithinTx(ctx context.Context, fn func(ctx context.Context) error) error
 }

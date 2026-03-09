@@ -1,10 +1,7 @@
-// Package question implements the Question application service.
+// Package question implements the application service layer for question management.
 //
-// It contains the business logic for managing questions, including
-// service methods, input DTOs, service-level errors,
-// repository interfaces and service-level tests.
-// The package coordinates domain entities with repository
-// implementations defined in the parent service layer.
+// It contains business logic, input DTOs (in other files), service-level errors,
+// repository interfaces, and coordinates domain entities with persistence layer.
 package question
 
 import "errors"
