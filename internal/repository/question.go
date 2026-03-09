@@ -127,7 +127,7 @@ func (r *Question) GetBySlug(ctx context.Context, slug string) (*domain.Question
 
 	q, err := scanQuestion(db.QueryRow(ctx, query, slug))
 	if err != nil {
-		return nil, fmt.Errorf("get question by slug: %w", err)
+		return nil, fmt.Errorf("failed to get question by slug: %w", err)
 	}
 
 	return q, nil
