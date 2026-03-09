@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS questions
 (
     id         uuid PRIMARY KEY     DEFAULT gen_random_uuid(),
 
-    title      text        NOT NULL UNIQUE,
+    title      text        NOT NULL,
+    slug       text        NOT NULL UNIQUE,
     content    jsonb       NOT NULL,
     level      smallint    NOT NULL, -- 0 = beginner, 1 = medium, 2 = advanced
 

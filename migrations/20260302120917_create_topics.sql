@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS topics
     id          uuid PRIMARY KEY     DEFAULT gen_random_uuid(),
 
     title       text        NOT NULL,
+    slug        text        NOT NULL UNIQUE,
     description text,
 
     created_by  uuid REFERENCES users (id),
