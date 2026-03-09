@@ -16,6 +16,7 @@ import (
 // CreateInput holds data for creating a new question.
 type CreateInput struct {
 	Title     string
+	Slug      string
 	Content   map[string]interface{}
 	Level     domain.QuestionLevel
 	TopicID   *uuid.UUID
@@ -27,6 +28,7 @@ type CreateInput struct {
 type UpdateInput struct {
 	ID        uuid.UUID
 	Title     *string
+	Slug      *string
 	Content   map[string]interface{}
 	Level     *domain.QuestionLevel
 	TopicID   *uuid.UUID
