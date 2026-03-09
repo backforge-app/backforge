@@ -1,7 +1,7 @@
-// Package auth implements authentication logic for the application.
+// Package auth implements authentication and session management logic.
 //
-// It handles Telegram-based login, JWT access token generation,
-// refresh token issuance and rotation, and validation of Telegram auth data.
+// It supports Telegram-based authentication, JWT issuance, refresh token rotation,
+// session persistence, and revocation.
 package auth
 
 import "errors"

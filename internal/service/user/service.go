@@ -1,10 +1,8 @@
-// Package user implements the User application service.
+// Package user implements the application service layer for user management.
 //
-// It contains the business logic for managing users, including
-// service methods, input DTOs, service-level errors,
-// repository interfaces and service-level tests.
-// The package coordinates domain entities with repository
-// implementations defined in the parent service layer.
+// It contains business logic for user creation, updates, retrieval,
+// service-level errors, input DTOs (in other files), and coordinates
+// domain entities with the persistence layer.
 package user
 
 import (

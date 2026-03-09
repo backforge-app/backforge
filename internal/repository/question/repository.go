@@ -75,98 +75,8 @@ func (r *Repository) Create(ctx context.Context, q *domain.Question) (uuid.UUID,
 	return id, nil
 }
 
-// GetByID retrieves a question by its UUID.
-func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, error) {
-	db := transactor.GetDB(ctx, r.db)
-
-	const query = `
-		SELECT 
-		    id, 
-		    title, 
-		    slug, 
-		    content, 
-		    level, 
-		    topic_id, 
-		    is_free, 
-		    created_by, 
-		    updated_by, 
-		    created_at, 
-		    updated_at
-		FROM questions
-		WHERE id = $1
-	`
-
-	q, err := scanQuestion(db.QueryRow(ctx, query, id))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get question by id: %w", err)
-	}
-
-	return q, nil
-}
-
-// GetBySlug retrieves a question by its slug.
-func (r *Repository) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
-	db := transactor.GetDB(ctx, r.db)
-
-	const query = `
-		SELECT 
-			id,
-			title,
-			slug,
-			content,
-			level,
-			topic_id,
-			is_free,
-			created_by,
-			updated_by,
-			created_at,
-			updated_at
-		FROM questions
-		WHERE slug = $1
-	`
-
-	q, err := scanQuestion(db.QueryRow(ctx, query, slug))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get question by slug: %w", err)
-	}
-
-	return q, nil
-}
-
-func scanQuestion(row pgx.Row) (*domain.Question, error) {
-	var q domain.Question
-	var contentJSON []byte
-
-	err := row.Scan(
-		&q.ID,
-		&q.Title,
-		&q.Slug,
-		&contentJSON,
-		&q.Level,
-		&q.TopicID,
-		&q.IsFree,
-		&q.CreatedBy,
-		&q.UpdatedBy,
-		&q.CreatedAt,
-		&q.UpdatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrQuestionNotFound
-		}
-		return nil, err
-	}
-
-	if err := json.Unmarshal(contentJSON, &q.Content); err != nil {
-		return nil, fmt.Errorf("unmarshal content: %w", err)
-	}
-
-	return &q, nil
-}
-
-// Update modifies an existing question's mutable fields.
-// Only admins should call this method.
-// Updates fields: Title, Content, Level, TopicID, IsFree, UpdatedBy.
+// Update modifies an existing question. Returns ErrQuestionNotFound if not found
+// or ErrQuestionAlreadyExists if slug conflict occurs.
 func (r *Repository) Update(ctx context.Context, q *domain.Question) error {
 	db := transactor.GetDB(ctx, r.db)
 
@@ -218,90 +128,335 @@ func (r *Repository) Update(ctx context.Context, q *domain.Question) error {
 	return nil
 }
 
-// ListOptions defines filters and pagination for listing questions.
+// GetByID retrieves a complete question by UUID including all associated tags.
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, error) {
+	db := transactor.GetDB(ctx, r.db)
+
+	const query = `
+		SELECT
+			q.id,
+			q.title,
+			q.slug,
+			q.content,
+			q.level,
+			q.topic_id,
+			q.is_free,
+			q.created_by,
+			q.updated_by,
+			q.created_at,
+			q.updated_at,
+			COALESCE(
+				json_agg(
+					json_build_object(
+						'id', t.id,
+						'name', t.name
+					)
+				) FILTER (WHERE t.id IS NOT NULL),
+				'[]'
+			) as tags_json
+		FROM questions q
+		LEFT JOIN question_tags qt ON qt.question_id = q.id
+		LEFT JOIN tags t ON t.id = qt.tag_id
+		WHERE q.id = $1
+		GROUP BY q.id
+	`
+
+	return scanQuestion(db.QueryRow(ctx, query, id))
+}
+
+// GetBySlug retrieves a complete question by slug including all associated tags.
+// Question is the full business entity: always returns tags via JSON aggregation.
+func (r *Repository) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
+	db := transactor.GetDB(ctx, r.db)
+
+	const query = `
+		SELECT
+			q.id,
+			q.title,
+			q.slug,
+			q.content,
+			q.level,
+			q.topic_id,
+			q.is_free,
+			q.created_by,
+			q.updated_by,
+			q.created_at,
+			q.updated_at,
+			COALESCE(
+				json_agg(
+					json_build_object(
+						'id', t.id,
+						'name', t.name
+					)
+				) FILTER (WHERE t.id IS NOT NULL),
+				'[]'
+			) as tags_json
+		FROM questions q
+		LEFT JOIN question_tags qt ON qt.question_id = q.id
+		LEFT JOIN tags t ON t.id = qt.tag_id
+		WHERE q.slug = $1
+		GROUP BY q.id
+	`
+
+	return scanQuestion(db.QueryRow(ctx, query, slug))
+}
+
+func scanQuestion(row pgx.Row) (*domain.Question, error) {
+	var q domain.Question
+	var contentJSON []byte
+	var tagsJSON []byte
+
+	err := row.Scan(
+		&q.ID,
+		&q.Title,
+		&q.Slug,
+		&contentJSON,
+		&q.Level,
+		&q.TopicID,
+		&q.IsFree,
+		&q.CreatedBy,
+		&q.UpdatedBy,
+		&q.CreatedAt,
+		&q.UpdatedAt,
+		&tagsJSON,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrQuestionNotFound
+		}
+
+		return nil, err
+	}
+
+	if err := json.Unmarshal(contentJSON, &q.Content); err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(tagsJSON, &q.Tags); err != nil {
+		return nil, err
+	}
+
+	return &q, nil
+}
+
+// ListOptions contains filtering and pagination parameters for question listing.
 type ListOptions struct {
-	Limit   int
-	Offset  int
+	Limit  int
+	Offset int
+	Search *string
+
 	Level   *domain.QuestionLevel
 	TopicID *uuid.UUID
 	IsFree  *bool
+
+	TagIDs []uuid.UUID
 }
 
-// List retrieves a list of questions based on filters and pagination.
-func (r *Repository) List(ctx context.Context, opts ListOptions) ([]*domain.Question, error) {
+// ListCards returns lightweight question representations (cards) according to the provided filters.
+func (r *Repository) ListCards(ctx context.Context, opts ListOptions) ([]*domain.QuestionCard, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	query := `
-		SELECT 
-		    id, 
-		    title,
-		    slug,
-		    content, 
-		    level, 
-		    topic_id, 
-		    is_free, 
-		    created_by, 
-		    updated_by, 
-		    created_at, 
-		    updated_at 
-		FROM questions 
-		WHERE 1=1`
-	var args []interface{}
-	argID := 1
+	SELECT
+		q.id,
+		q.title,
+		q.slug,
+		q.level,
+		q.created_at > now() - interval '7 days' as is_new,
+		COALESCE(
+			json_agg(
+				json_build_object(
+					'id', t.id,
+					'name', t.name
+				)
+			) FILTER (WHERE t.id IS NOT NULL),
+			'[]'
+		) as tags_json
+	FROM questions q
+	LEFT JOIN question_tags qt ON qt.question_id = q.id
+	LEFT JOIN tags t ON t.id = qt.tag_id
+	WHERE 1=1
+	`
+
+	args := make([]any, 0)
+	arg := 1
+
+	if opts.Search != nil {
+		query += fmt.Sprintf(" AND q.title ILIKE '%%' || $%d || '%%'", arg)
+		args = append(args, *opts.Search)
+		arg++
+	}
 
 	if opts.Level != nil {
-		query += fmt.Sprintf(" AND level = $%d", argID)
+		query += fmt.Sprintf(" AND q.level = $%d", arg)
 		args = append(args, *opts.Level)
-		argID++
+		arg++
 	}
 
 	if opts.TopicID != nil {
-		query += fmt.Sprintf(" AND topic_id = $%d", argID)
+		query += fmt.Sprintf(" AND q.topic_id = $%d", arg)
 		args = append(args, *opts.TopicID)
-		argID++
+		arg++
 	}
 
 	if opts.IsFree != nil {
-		query += fmt.Sprintf(" AND is_free = $%d", argID)
+		query += fmt.Sprintf(" AND q.is_free = $%d", arg)
 		args = append(args, *opts.IsFree)
-		argID++
+		arg++
 	}
 
-	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argID, argID+1)
+	if len(opts.TagIDs) > 0 {
+		query += fmt.Sprintf(`
+		AND q.id IN (
+			SELECT question_id
+			FROM question_tags
+			WHERE tag_id = ANY($%d)
+		)
+		`, arg)
+
+		args = append(args, opts.TagIDs)
+		arg++
+	}
+
+	query += fmt.Sprintf(`
+	GROUP BY q.id
+	ORDER BY q.created_at DESC
+	LIMIT $%d OFFSET $%d
+	`, arg, arg+1)
+
 	args = append(args, opts.Limit, opts.Offset)
 
 	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list questions: %w", err)
+		return nil, fmt.Errorf("list cards: %w", err)
+	}
+
+	defer rows.Close()
+
+	var result []*domain.QuestionCard
+
+	for rows.Next() {
+		q, err := scanQuestionCard(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, q)
+	}
+
+	return result, nil
+}
+
+func scanQuestionCard(row pgx.Row) (*domain.QuestionCard, error) {
+	var q domain.QuestionCard
+	var tagsJSON []byte
+
+	err := row.Scan(
+		&q.ID,
+		&q.Title,
+		&q.Slug,
+		&q.Level,
+		&q.IsNew,
+		&tagsJSON,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(tagsJSON, &q.Tags); err != nil {
+		return nil, err
+	}
+
+	return &q, nil
+}
+
+// ListByTopic returns all full questions belonging to the specified topic, including tags.
+func (r *Repository) ListByTopic(ctx context.Context, topicID uuid.UUID) ([]*domain.Question, error) {
+	db := transactor.GetDB(ctx, r.db)
+
+	const query = `
+        SELECT
+            q.id,
+            q.title,
+            q.slug,
+            q.level,
+            q.content,
+            q.topic_id,
+            q.is_free,
+            q.created_by,
+            q.updated_by,
+            q.created_at,
+            q.updated_at,
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'id', t.id,
+                        'name', t.name,
+                        'created_by', t.created_by,
+                        'updated_by', t.updated_by,
+                        'created_at', t.created_at,
+                        'updated_at', t.updated_at
+                    )
+                ) FILTER (WHERE t.id IS NOT NULL),
+                '[]'::json
+            ) as tags_json
+        FROM questions q
+        LEFT JOIN question_tags qt ON qt.question_id = q.id
+        LEFT JOIN tags t ON t.id = qt.tag_id
+        WHERE q.topic_id = $1
+        GROUP BY
+            q.id, q.title, q.slug, q.level, q.content, q.topic_id, q.is_free,
+            q.created_by, q.updated_by, q.created_at, q.updated_at
+        ORDER BY q.created_at
+    `
+
+	rows, err := db.Query(ctx, query, topicID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list questions by topic: %w", err)
 	}
 	defer rows.Close()
 
-	var result []*domain.Question
+	var questions []*domain.Question
+
 	for rows.Next() {
 		var q domain.Question
 		var contentJSON []byte
-		if err := rows.Scan(
+		var tagsJSON []byte
+
+		err := rows.Scan(
 			&q.ID,
 			&q.Title,
 			&q.Slug,
-			&contentJSON,
 			&q.Level,
+			&contentJSON,
 			&q.TopicID,
 			&q.IsFree,
 			&q.CreatedBy,
 			&q.UpdatedBy,
 			&q.CreatedAt,
 			&q.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan question: %w", err)
+			&tagsJSON,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan question row: %w", err)
 		}
 
 		if err := json.Unmarshal(contentJSON, &q.Content); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal content: %w", err)
 		}
 
-		result = append(result, &q)
+		if err := json.Unmarshal(tagsJSON, &q.Tags); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal tags: %w", err)
+		}
+
+		questions = append(questions, &q)
 	}
 
-	return result, nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return questions, nil
 }

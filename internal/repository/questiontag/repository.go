@@ -1,6 +1,6 @@
-// Package question_tag provides the repository layer for accessing question-tag many-to-many relationships.
+// Package questiontag provides the repository layer for accessing question-tag many-to-many relationships.
 // It includes PostgreSQL operations, transaction handling and methods to link/unlink tags to questions.
-package question_tag
+package questiontag
 
 import (
 	"context"
@@ -53,6 +53,22 @@ func (r *QuestionTag) RemoveTagsFromQuestion(ctx context.Context, questionID uui
 		if _, err := db.Exec(ctx, q, questionID, tagID); err != nil {
 			return fmt.Errorf("remove tag from question: %w", err)
 		}
+	}
+
+	return nil
+}
+
+// RemoveAllForQuestion deletes all tag links for a specific question.
+func (r *QuestionTag) RemoveAllForQuestion(ctx context.Context, questionID uuid.UUID) error {
+	db := transactor.GetDB(ctx, r.db)
+
+	const q = `
+		DELETE FROM question_tags
+		WHERE question_id = $1
+	`
+
+	if _, err := db.Exec(ctx, q, questionID); err != nil {
+		return fmt.Errorf("remove all tags from question: %w", err)
 	}
 
 	return nil
