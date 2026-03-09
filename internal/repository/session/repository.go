@@ -1,7 +1,7 @@
-// Package repository provides the repository layer for accessing database entities.
-// It includes PostgreSQL transaction handling, repository-level and repository
-// implementations for entities like users, sessions, questions, etc.
-package repository
+// Package session provides the repository layer for accessing session entities.
+// It includes PostgreSQL operations, transaction handling, and methods to
+// create, read, update, and manage user sessions.
+package session
 
 import (
 	"context"
@@ -16,18 +16,18 @@ import (
 	"github.com/backforge-app/backforge/pkg/transactor"
 )
 
-// Session is the repository for session operations.
-type Session struct {
+// Repository handles operations related to Session entities.
+type Repository struct {
 	db transactor.DBTx
 }
 
-// NewSession creates a new Session repository.
-func NewSession(db transactor.DBTx) *Session {
-	return &Session{db: db}
+// NewRepository creates a new Session repository instance.
+func NewRepository(db transactor.DBTx) *Repository {
+	return &Repository{db: db}
 }
 
 // Create inserts a new session into the database.
-func (r *Session) Create(ctx context.Context, s *domain.Session) error {
+func (r *Repository) Create(ctx context.Context, s *domain.Session) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -53,7 +53,7 @@ func (r *Session) Create(ctx context.Context, s *domain.Session) error {
 }
 
 // GetByToken retrieves a session by its token string value.
-func (r *Session) GetByToken(ctx context.Context, token string) (*domain.Session, error) {
+func (r *Repository) GetByToken(ctx context.Context, token string) (*domain.Session, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -92,7 +92,7 @@ func (r *Session) GetByToken(ctx context.Context, token string) (*domain.Session
 }
 
 // Revoke marks the refresh token as revoked.
-func (r *Session) Revoke(ctx context.Context, token string) error {
+func (r *Repository) Revoke(ctx context.Context, token string) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `

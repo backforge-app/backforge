@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	"github.com/backforge-app/backforge/internal/repository"
+	repository "github.com/backforge-app/backforge/internal/repository/question"
 )
 
 func TestQuestion_Create(t *testing.T) {

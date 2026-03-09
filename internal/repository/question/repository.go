@@ -1,7 +1,7 @@
-// Package repository provides the repository layer for accessing database entities.
-// It includes PostgreSQL transaction handling, repository-level errors, and repository
-// implementations for entities like users, sessions, questions, etc.
-package repository
+// Package question provides the repository layer for accessing question entities.
+// It includes PostgreSQL operations, transaction handling, and methods to
+// create, read, update, list, and manage questions.
+package question
 
 import (
 	"context"
@@ -18,18 +18,18 @@ import (
 	"github.com/backforge-app/backforge/pkg/transactor"
 )
 
-// Question repository handles operations related to Question entities.
-type Question struct {
+// Repository handles operations related to Question entities.
+type Repository struct {
 	db transactor.DBTx
 }
 
-// NewQuestion creates a new Question repository instance.
-func NewQuestion(db transactor.DBTx) *Question {
-	return &Question{db: db}
+// NewRepository creates a new Question repository instance.
+func NewRepository(db transactor.DBTx) *Repository {
+	return &Repository{db: db}
 }
 
-// Create inserts a new question into the database and returns its ID.
-func (r *Question) Create(ctx context.Context, q *domain.Question) (uuid.UUID, error) {
+// Create inserts a new Repository into the database and returns its ID.
+func (r *Repository) Create(ctx context.Context, q *domain.Question) (uuid.UUID, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	contentJSON, err := json.Marshal(q.Content)
@@ -76,7 +76,7 @@ func (r *Question) Create(ctx context.Context, q *domain.Question) (uuid.UUID, e
 }
 
 // GetByID retrieves a question by its UUID.
-func (r *Question) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, error) {
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
@@ -105,7 +105,7 @@ func (r *Question) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question,
 }
 
 // GetBySlug retrieves a question by its slug.
-func (r *Question) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
+func (r *Repository) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
@@ -167,7 +167,7 @@ func scanQuestion(row pgx.Row) (*domain.Question, error) {
 // Update modifies an existing question's mutable fields.
 // Only admins should call this method.
 // Updates fields: Title, Content, Level, TopicID, IsFree, UpdatedBy.
-func (r *Question) Update(ctx context.Context, q *domain.Question) error {
+func (r *Repository) Update(ctx context.Context, q *domain.Question) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	contentJSON, err := json.Marshal(q.Content)
@@ -228,7 +228,7 @@ type ListOptions struct {
 }
 
 // List retrieves a list of questions based on filters and pagination.
-func (r *Question) List(ctx context.Context, opts ListOptions) ([]*domain.Question, error) {
+func (r *Repository) List(ctx context.Context, opts ListOptions) ([]*domain.Question, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	query := `

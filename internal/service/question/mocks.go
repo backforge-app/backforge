@@ -9,7 +9,8 @@ import (
 	reflect "reflect"
 
 	domain "github.com/backforge-app/backforge/internal/domain"
-	repository "github.com/backforge-app/backforge/internal/repository"
+	repository "github.com/backforge-app/backforge/internal/repository/question"
+
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
 )

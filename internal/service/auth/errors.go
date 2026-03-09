@@ -22,4 +22,8 @@ var (
 	// ErrRefreshTokenRevoked is returned when attempting to use a refresh token
 	// that has been explicitly revoked.
 	ErrRefreshTokenRevoked = errors.New("refresh token revoked")
+
+	// ErrRefreshTokenAlreadyExists is returned when a newly generated refresh token
+	// collides with an existing token (extremely rare, but possible).
+	ErrRefreshTokenAlreadyExists = errors.New("refresh token already exists")
 )

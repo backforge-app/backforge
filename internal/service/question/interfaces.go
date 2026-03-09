@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	"github.com/backforge-app/backforge/internal/repository"
+	"github.com/backforge-app/backforge/internal/repository/question"
 )
 
 //go:generate mockgen -package=question -destination=mocks.go github.com/backforge-app/backforge/internal/service/question Repository,Transactor
@@ -24,7 +24,7 @@ type Repository interface {
 	Update(ctx context.Context, q *domain.Question) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Question, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Question, error)
-	List(ctx context.Context, opts repository.ListOptions) ([]*domain.Question, error)
+	List(ctx context.Context, opts question.ListOptions) ([]*domain.Question, error)
 }
 
 // Transactor runs a function in a DB transaction.

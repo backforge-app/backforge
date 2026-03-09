@@ -1,7 +1,7 @@
-// Package repository provides the repository layer for accessing database entities.
-// It includes PostgreSQL transaction handling, repository-level errors, and repository
-// implementations for entities like users, sessions, questions, etc.
-package repository
+// Package topic provides the repository layer for accessing topic entities.
+// It includes PostgreSQL operations, transaction handling, and methods to
+// create, read, update, and list topics.
+package topic
 
 import (
 	"context"
@@ -17,18 +17,18 @@ import (
 	"github.com/backforge-app/backforge/pkg/transactor"
 )
 
-// Topic repository handles CRUD operations for topics.
-type Topic struct {
+// Repository handles operations related to Topic entities.
+type Repository struct {
 	db transactor.DBTx
 }
 
-// NewTopic creates a new Topic repository.
-func NewTopic(db transactor.DBTx) *Topic {
-	return &Topic{db: db}
+// NewRepository creates a new Topic repository instance.
+func NewRepository(db transactor.DBTx) *Repository {
+	return &Repository{db: db}
 }
 
 // Create inserts a new topic into the database and returns its ID.
-func (r *Topic) Create(ctx context.Context, t *domain.Topic) (uuid.UUID, error) {
+func (r *Repository) Create(ctx context.Context, t *domain.Topic) (uuid.UUID, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
@@ -65,7 +65,7 @@ func (r *Topic) Create(ctx context.Context, t *domain.Topic) (uuid.UUID, error) 
 }
 
 // GetByID retrieves a topic by its UUID.
-func (r *Topic) GetByID(ctx context.Context, id uuid.UUID) (*domain.Topic, error) {
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Topic, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
@@ -91,7 +91,7 @@ func (r *Topic) GetByID(ctx context.Context, id uuid.UUID) (*domain.Topic, error
 }
 
 // GetBySlug retrieves a topic by its slug.
-func (r *Topic) GetBySlug(ctx context.Context, slug string) (*domain.Topic, error) {
+func (r *Repository) GetBySlug(ctx context.Context, slug string) (*domain.Topic, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
@@ -140,7 +140,7 @@ func scanTopic(row pgx.Row) (*domain.Topic, error) {
 }
 
 // Update modifies an existing topic.
-func (r *Topic) Update(ctx context.Context, t *domain.Topic) error {
+func (r *Repository) Update(ctx context.Context, t *domain.Topic) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
@@ -180,7 +180,7 @@ func (r *Topic) Update(ctx context.Context, t *domain.Topic) error {
 }
 
 // List retrieves all topics.
-func (r *Topic) List(ctx context.Context) ([]*domain.Topic, error) {
+func (r *Repository) List(ctx context.Context) ([]*domain.Topic, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const query = `
