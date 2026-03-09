@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	"github.com/backforge-app/backforge/internal/repository"
+	repository "github.com/backforge-app/backforge/internal/repository/user"
 )
 
 // Service manages user business operations and coordinates with the repository layer.
