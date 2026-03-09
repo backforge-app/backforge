@@ -1,6 +1,6 @@
 // Package topic provides the repository layer for accessing topic entities.
-// It includes PostgreSQL operations, transaction handling, and methods to
-// create, read, update, and list topics.
+// It includes PostgreSQL operations, transaction handling, repository-level errors
+// and methods to create, read, update, and list topics.
 package topic
 
 import "errors"

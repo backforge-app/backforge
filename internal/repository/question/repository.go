@@ -1,6 +1,6 @@
 // Package question provides the repository layer for accessing question entities.
-// It includes PostgreSQL operations, transaction handling, and methods to
-// create, read, update, list, and manage questions.
+// It includes PostgreSQL operations, transaction handling, repository-level errors
+// and methods to create, read, update, list, and manage questions.
 package question
 
 import (
