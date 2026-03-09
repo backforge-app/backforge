@@ -104,6 +104,7 @@ func (r *Question) GetByID(ctx context.Context, id uuid.UUID) (*domain.Question,
 	return q, nil
 }
 
+// GetBySlug retrieves a question by its slug.
 func (r *Question) GetBySlug(ctx context.Context, slug string) (*domain.Question, error) {
 	db := transactor.GetDB(ctx, r.db)
 
