@@ -31,4 +31,11 @@ var (
 	// ErrQuestionAlreadyExists is returned when attempting to create a question
 	// that violates unique constraints (if any).
 	ErrQuestionAlreadyExists = errors.New("question already exists")
+
+	// ErrTopicNotFound is returned when a topic is not found in the database.
+	ErrTopicNotFound = errors.New("topic not found")
+
+	// ErrTopicAlreadyExists is returned when attempting to create a topic
+	// that violates unique constraints (e.g., slug already exists).
+	ErrTopicAlreadyExists = errors.New("topic already exists")
 )
