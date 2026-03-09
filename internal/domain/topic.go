@@ -7,6 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// TopicRow is a lightweight representation of a topic for listing in UI tables.
+// Contains basic info and the number of questions in the topic.
+type TopicRow struct {
+	ID            uuid.UUID
+	Title         string
+	Slug          string
+	QuestionCount int
+}
+
 // Topic represents a category/topic for questions.
 type Topic struct {
 	ID          uuid.UUID
