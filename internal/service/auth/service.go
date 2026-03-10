@@ -91,7 +91,10 @@ func (s *Service) LoginWithTelegram(
 
 // Refresh exchanges a valid refresh token for a new access token and a new refresh token
 // (token rotation). The old refresh token is revoked.
-func (s *Service) Refresh(ctx context.Context, oldToken string) (newAccessToken, newRefreshToken string, err error) {
+func (s *Service) Refresh(
+	ctx context.Context,
+	oldToken string,
+) (newAccessToken, newRefreshToken string, err error) {
 	var accessToken string
 	var refreshToken string
 

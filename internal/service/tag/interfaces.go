@@ -2,6 +2,8 @@
 //
 // It contains business logic, input DTOs (in other files), service-level errors,
 // repository interfaces, and coordinates domain entities with persistence layer.
+//
+//go:generate mockgen -package=tag -destination=mocks.go github.com/backforge-app/backforge/internal/service/tag Repository
 package tag
 
 import (
@@ -11,8 +13,6 @@ import (
 
 	"github.com/backforge-app/backforge/internal/domain"
 )
-
-//go:generate mockgen -package=tag -destination=mocks.go github.com/backforge-app/backforge/internal/service/tag Repository
 
 // Repository defines data access operations for Tag entities.
 type Repository interface {

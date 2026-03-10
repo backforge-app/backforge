@@ -2,6 +2,8 @@
 //
 // It contains business logic, input DTOs (in other files), service-level errors,
 // repository interfaces, and coordinates domain entities with persistence layer.
+//
+//go:generate mockgen -package=topic -destination=mocks.go github.com/backforge-app/backforge/internal/service/topic Repository,Transactor
 package topic
 
 import (
@@ -11,8 +13,6 @@ import (
 
 	"github.com/backforge-app/backforge/internal/domain"
 )
-
-//go:generate mockgen -package=topic -destination=mocks.go github.com/backforge-app/backforge/internal/service/topic Repository,Transactor
 
 // Repository defines data access operations for Topic entities.
 type Repository interface {
