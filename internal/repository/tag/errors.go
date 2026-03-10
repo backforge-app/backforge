@@ -1,4 +1,5 @@
 // Package tag provides the repository layer for accessing tag entities.
+//
 // It includes PostgreSQL operations, transaction handling, repository-level errors
 // and methods to create, read, list, and manage tags.
 package tag
