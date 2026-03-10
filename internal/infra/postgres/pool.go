@@ -1,6 +1,7 @@
-// Package postgres provides PostgreSQL infrastructure components.
-// It includes connection pool setup, transaction handling, repository-level errors
-// and repository implementations for accessing database entities like users.
+// Package postgres provides PostgreSQL infrastructure setup.
+//
+// It contains initialization and configuration of the pgx connection pool
+// used by the application to interact with PostgreSQL.
 package postgres
 
 import (
