@@ -3,6 +3,8 @@
 // It contains business logic for user creation, updates, retrieval,
 // service-level errors, input DTOs (in other files), and coordinates
 // domain entities with the persistence layer.
+//
+//go:generate mockgen -package=user -destination=mocks.go github.com/backforge-app/backforge/internal/service/user Repository,Transactor
 package user
 
 import (
@@ -12,8 +14,6 @@ import (
 
 	"github.com/backforge-app/backforge/internal/domain"
 )
-
-//go:generate mockgen -package=user -destination=mocks.go github.com/backforge-app/backforge/internal/service/user Repository,Transactor
 
 // Repository defines data access operations for User entities.
 type Repository interface {

@@ -1,7 +1,9 @@
 // Package question implements the application service layer for question management.
 //
-// It contains business logic, input DTOs (in other files), service-level errors,
+// It contains business logic, input DTOs, service-level errors,
 // repository interfaces, and coordinates domain entities with persistence layer.
+//
+//go:generate mockgen -package=question -destination=mocks.go github.com/backforge-app/backforge/internal/service/question Repository,TagRepository,Transactor
 package question
 
 import (
@@ -12,8 +14,6 @@ import (
 	"github.com/backforge-app/backforge/internal/domain"
 	"github.com/backforge-app/backforge/internal/repository/question"
 )
-
-//go:generate mockgen -package=question -destination=mocks.go github.com/backforge-app/backforge/internal/service/question Repository,TagRepository,Transactor
 
 // Repository defines data access operations for Question entities.
 type Repository interface {

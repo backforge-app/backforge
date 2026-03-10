@@ -1,6 +1,6 @@
 // Package question implements the application service layer for question management.
 //
-// It contains business logic, input DTOs (in other files), service-level errors,
+// It contains business logic, input DTOs, service-level errors,
 // repository interfaces, and coordinates domain entities with persistence layer.
 package question
 

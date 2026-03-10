@@ -2,6 +2,8 @@
 //
 // It supports Telegram-based authentication, JWT issuance, refresh token rotation,
 // session persistence, and revocation.
+//
+//go:generate mockgen -package=auth -destination=mocks.go github.com/backforge-app/backforge/internal/service/auth UserProvider,SessionRepository,Transactor
 package auth
 
 import (
@@ -12,8 +14,6 @@ import (
 	"github.com/backforge-app/backforge/internal/domain"
 	"github.com/backforge-app/backforge/internal/service/user"
 )
-
-//go:generate mockgen -package=auth -destination=mocks.go github.com/backforge-app/backforge/internal/service/auth UserProvider,SessionRepository,Transactor
 
 // UserProvider defines access and creation operations for user entities.
 type UserProvider interface {
