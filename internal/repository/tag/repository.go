@@ -1,4 +1,5 @@
 // Package tag provides the repository layer for accessing tag entities.
+//
 // It includes PostgreSQL operations, transaction handling, repository-level errors
 // and methods to create, read, list, and manage tags.
 package tag
@@ -127,6 +128,26 @@ func scanTag(row pgx.Row) (*domain.Tag, error) {
 	}
 
 	return &t, nil
+}
+
+// Delete removes a tag from the database by its UUID.
+//
+// Returns ErrTagNotFound if the tag does not exist.
+func (r *Tag) Delete(ctx context.Context, id uuid.UUID) error {
+	db := transactor.GetDB(ctx, r.db)
+
+	const q = `DELETE FROM tags WHERE id = $1`
+
+	cmdTag, err := db.Exec(ctx, q, id)
+	if err != nil {
+		return fmt.Errorf("delete tag: %w", err)
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return ErrTagNotFound
+	}
+
+	return nil
 }
 
 // List retrieves all tags ordered by name.
