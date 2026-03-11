@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS sessions
 
     user_id    uuid REFERENCES users (id) ON DELETE CASCADE,
 
-    token      text        NOT NULL UNIQUE,
+    token_hash text        NOT NULL UNIQUE,
     expires_at timestamptz NOT NULL,
     revoked    boolean     NOT NULL DEFAULT FALSE,
 
@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS sessions
 );
 
 CREATE INDEX idx_sessions_user_id ON sessions (user_id);
-CREATE INDEX idx_sessions_token ON sessions (token);
+CREATE INDEX idx_sessions_token_hash ON sessions (token_hash);
+CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 -- +goose StatementEnd
 
 -- +goose Down

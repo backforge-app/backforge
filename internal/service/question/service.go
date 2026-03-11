@@ -40,8 +40,8 @@ func NewService(
 //
 // Returns the created question ID.
 func (s *Service) Create(ctx context.Context, input CreateInput) (uuid.UUID, error) {
-	if input.Title == "" {
-		return uuid.Nil, ErrQuestionInvalidData
+	if err := input.Validate(); err != nil {
+		return uuid.Nil, err
 	}
 
 	q := domain.NewQuestion(

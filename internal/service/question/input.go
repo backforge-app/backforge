@@ -22,6 +22,26 @@ type CreateInput struct {
 	CreatedBy *uuid.UUID
 }
 
+func (in CreateInput) Validate() error {
+	if in.Title == "" {
+		return ErrQuestionInvalidData
+	}
+
+	if in.Slug == "" {
+		return ErrQuestionInvalidData
+	}
+
+	if len(in.Content) == 0 {
+		return ErrQuestionInvalidData
+	}
+
+	if !in.Level.IsValid() {
+		return ErrQuestionInvalidData
+	}
+
+	return nil
+}
+
 // UpdateInput holds data for updating an existing question.
 type UpdateInput struct {
 	ID        uuid.UUID
