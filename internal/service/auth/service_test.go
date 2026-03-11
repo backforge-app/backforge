@@ -205,7 +205,7 @@ func TestAuth_Refresh(t *testing.T) {
 	userID := uuid.New()
 	oldToken := "old-token"
 	rt := &domain.Session{
-		Token:     oldToken,
+		TokenHash: hashToken(oldToken),
 		UserID:    userID,
 		ExpiresAt: time.Now().Add(time.Hour),
 		Revoked:   false,
@@ -219,12 +219,26 @@ func TestAuth_Refresh(t *testing.T) {
 			},
 		)
 
-		mockRefresh.EXPECT().GetByToken(ctx, oldToken).Return(rt, nil)
-		mockUsers.EXPECT().GetByID(ctx, userID).Return(domainUser, nil)
-		mockRefresh.EXPECT().Create(ctx, gomock.Any()).Return(nil)
-		mockRefresh.EXPECT().Revoke(ctx, oldToken).Return(nil)
+		tokenHash := hashToken(oldToken)
+
+		mockRefresh.EXPECT().
+			GetByTokenHash(ctx, tokenHash).
+			Return(rt, nil)
+
+		mockUsers.EXPECT().
+			GetByID(ctx, userID).
+			Return(domainUser, nil)
+
+		mockRefresh.EXPECT().
+			Revoke(ctx, tokenHash).
+			Return(nil)
+
+		mockRefresh.EXPECT().
+			Create(ctx, gomock.Any()).
+			Return(nil)
 
 		access, refresh, err := svc.Refresh(ctx, oldToken)
+
 		require.NoError(t, err)
 		assert.NotEmpty(t, access)
 		assert.NotEmpty(t, refresh)
@@ -239,7 +253,7 @@ func TestAuth_Refresh(t *testing.T) {
 				return fn(ctx)
 			},
 		)
-		mockRefresh.EXPECT().GetByToken(ctx, oldToken).Return(&rtRevoked, nil)
+		mockRefresh.EXPECT().GetByTokenHash(ctx, hashToken(oldToken)).Return(&rtRevoked, nil)
 
 		_, _, err := svc.Refresh(ctx, oldToken)
 		assert.ErrorIs(t, err, ErrRefreshTokenRevoked)
@@ -254,7 +268,7 @@ func TestAuth_Refresh(t *testing.T) {
 				return fn(ctx)
 			},
 		)
-		mockRefresh.EXPECT().GetByToken(ctx, oldToken).Return(&rtExpired, nil)
+		mockRefresh.EXPECT().GetByTokenHash(ctx, hashToken(oldToken)).Return(&rtExpired, nil)
 
 		_, _, err := svc.Refresh(ctx, oldToken)
 		assert.ErrorIs(t, err, ErrRefreshTokenInvalid)

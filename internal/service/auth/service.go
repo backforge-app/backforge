@@ -7,7 +7,9 @@ package auth
 import (
 	"context"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -95,11 +97,10 @@ func (s *Service) Refresh(
 	ctx context.Context,
 	oldToken string,
 ) (newAccessToken, newRefreshToken string, err error) {
-	var accessToken string
-	var refreshToken string
-
 	err = s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
-		session, err := s.sessionRepo.GetByToken(txCtx, oldToken)
+		tokenHash := hashToken(oldToken)
+
+		session, err := s.sessionRepo.GetByTokenHash(txCtx, tokenHash)
 		if err != nil {
 			if errors.Is(err, sessionrepo.ErrSessionNotFound) {
 				return ErrRefreshTokenInvalid
@@ -120,12 +121,16 @@ func (s *Service) Refresh(
 			return fmt.Errorf("get user: %w", err)
 		}
 
-		accessToken, err = s.generateAccessToken(u)
+		accessToken, err := s.generateAccessToken(u)
 		if err != nil {
 			return fmt.Errorf("generate access token: %w", err)
 		}
 
-		refreshToken, err = s.generateRefreshToken(txCtx, u.ID)
+		if err := s.sessionRepo.Revoke(txCtx, tokenHash); err != nil {
+			return fmt.Errorf("revoke old refresh token: %w", err)
+		}
+
+		newRefreshToken, err = s.generateRefreshToken(txCtx, u.ID)
 		if err != nil {
 			if errors.Is(err, ErrRefreshTokenAlreadyExists) {
 				return err
@@ -133,9 +138,7 @@ func (s *Service) Refresh(
 			return fmt.Errorf("generate refresh token: %w", err)
 		}
 
-		if err := s.sessionRepo.Revoke(txCtx, oldToken); err != nil {
-			return fmt.Errorf("revoke old refresh token: %w", err)
-		}
+		newAccessToken = accessToken
 
 		return nil
 	})
@@ -143,17 +146,21 @@ func (s *Service) Refresh(
 		return "", "", err
 	}
 
-	return accessToken, refreshToken, nil
+	return newAccessToken, newRefreshToken, nil
 }
 
 // generateAccessToken creates a new JWT access token for the given user.
 func (s *Service) generateAccessToken(user *domain.User) (string, error) {
+	now := time.Now()
+
 	claims := jwt.MapClaims{
 		"sub":    user.ID.String(),
 		"role":   user.Role,
 		"is_pro": user.IsPro,
-		"exp":    time.Now().Add(s.authConfig.AccessTokenTTL).Unix(),
-		"iat":    time.Now().Unix(),
+		"iss":    "backforge",
+		"aud":    "backforge-client",
+		"exp":    now.Add(s.authConfig.AccessTokenTTL).Unix(),
+		"iat":    now.Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -169,12 +176,18 @@ func (s *Service) generateAccessToken(user *domain.User) (string, error) {
 // generateRefreshToken generates a new opaque refresh token, saves it to the database
 // and returns the token string.
 func (s *Service) generateRefreshToken(ctx context.Context, userID uuid.UUID) (string, error) {
-	// Using two UUIDs concatenated gives enough entropy and is URL-safe
-	token := uuid.NewString() + uuid.NewString()
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("generate random token: %w", err)
+	}
+
+	token := base64.RawURLEncoding.EncodeToString(tokenBytes)
+
+	tokenHash := hashToken(token)
 
 	expiresAt := time.Now().Add(s.authConfig.RefreshTokenTTL)
 
-	session := domain.NewSession(userID, token, expiresAt)
+	session := domain.NewSession(userID, tokenHash, expiresAt)
 
 	if err := s.sessionRepo.Create(ctx, session); err != nil {
 		if errors.Is(err, sessionrepo.ErrSessionAlreadyExists) {
@@ -184,6 +197,11 @@ func (s *Service) generateRefreshToken(ctx context.Context, userID uuid.UUID) (s
 	}
 
 	return token, nil
+}
+
+func hashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 // validateTelegramAuth verifies the Telegram Login data signature using HMAC-SHA256
@@ -223,12 +241,19 @@ func (s *Service) validateTelegramAuth(input TelegramLoginInput) error {
 
 	// Compute expected HMAC-SHA256 hash
 	secret := sha256.Sum256([]byte(s.botToken))
+
 	h := hmac.New(sha256.New, secret[:])
 	h.Write([]byte(dataCheckString))
-	expectedHash := hex.EncodeToString(h.Sum(nil))
+
+	expectedHash := h.Sum(nil)
+
+	providedHash, err := hex.DecodeString(input.Hash)
+	if err != nil {
+		return ErrInvalidTelegramAuth
+	}
 
 	// Constant-time comparison to prevent timing attacks
-	if !hmac.Equal([]byte(expectedHash), []byte(input.Hash)) {
+	if !hmac.Equal(expectedHash, providedHash) {
 		return ErrInvalidTelegramAuth
 	}
 

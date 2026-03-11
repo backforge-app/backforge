@@ -29,11 +29,11 @@ type SessionRepository interface {
 	// Create stores a new session in the storage.
 	Create(ctx context.Context, s *domain.Session) error
 
-	// GetByToken retrieves an active session by its refresh or access token.
-	GetByToken(ctx context.Context, token string) (*domain.Session, error)
+	// GetByTokenHash retrieves an active session by its refresh or access token.
+	GetByTokenHash(ctx context.Context, tokenHash string) (*domain.Session, error)
 
 	// Revoke invalidates a session by its token.
-	Revoke(ctx context.Context, token string) error
+	Revoke(ctx context.Context, tokenHash string) error
 }
 
 // Transactor provides transactional execution scope for database operations.

@@ -11,7 +11,7 @@ import (
 type Session struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
-	Token     string
+	TokenHash string
 	ExpiresAt time.Time
 	Revoked   bool
 	CreatedAt time.Time
@@ -19,10 +19,10 @@ type Session struct {
 }
 
 // NewSession creates a new session.
-func NewSession(userID uuid.UUID, token string, expiresAt time.Time) *Session {
+func NewSession(userID uuid.UUID, tokenHash string, expiresAt time.Time) *Session {
 	return &Session{
 		UserID:    userID,
-		Token:     token,
+		TokenHash: tokenHash,
 		ExpiresAt: expiresAt,
 	}
 }

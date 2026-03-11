@@ -32,17 +32,17 @@ func (r *Repository) Create(ctx context.Context, s *domain.Session) error {
 
 	const q = `
 		INSERT INTO sessions (
-		    user_id, token, expires_at
+		    user_id, token_hash, expires_at
 		) VALUES ($1, $2, $3)
 	`
 
-	_, err := db.Exec(ctx, q, s.UserID, s.Token, s.ExpiresAt)
+	_, err := db.Exec(ctx, q, s.UserID, s.TokenHash, s.ExpiresAt)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation &&
-				pgErr.ConstraintName == "sessions_token_key" {
+				pgErr.ConstraintName == "sessions_token_hash_key" {
 				return ErrSessionAlreadyExists
 			}
 		}
@@ -52,29 +52,29 @@ func (r *Repository) Create(ctx context.Context, s *domain.Session) error {
 	return nil
 }
 
-// GetByToken retrieves a session by its token string value.
-func (r *Repository) GetByToken(ctx context.Context, token string) (*domain.Session, error) {
+// GetByTokenHash retrieves a session by its token string value.
+func (r *Repository) GetByTokenHash(ctx context.Context, tokenHash string) (*domain.Session, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
 		SELECT 
 			id,
 			user_id,
-			token,
+			token_hash,
 			expires_at,
 			revoked,
 			created_at,
 			updated_at
 		FROM sessions
-		WHERE token = $1
+		WHERE token_hash = $1
 	`
 
 	var s domain.Session
 
-	err := db.QueryRow(ctx, q, token).Scan(
+	err := db.QueryRow(ctx, q, tokenHash).Scan(
 		&s.ID,
 		&s.UserID,
-		&s.Token,
+		&s.TokenHash,
 		&s.ExpiresAt,
 		&s.Revoked,
 		&s.CreatedAt,
@@ -85,14 +85,14 @@ func (r *Repository) GetByToken(ctx context.Context, token string) (*domain.Sess
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrSessionNotFound
 		}
-		return nil, fmt.Errorf("failed to get session by token: %w", err)
+		return nil, fmt.Errorf("failed to get session by token hash: %w", err)
 	}
 
 	return &s, nil
 }
 
 // Revoke marks the refresh token as revoked.
-func (r *Repository) Revoke(ctx context.Context, token string) error {
+func (r *Repository) Revoke(ctx context.Context, tokenHash string) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -100,10 +100,10 @@ func (r *Repository) Revoke(ctx context.Context, token string) error {
 		SET 
 			revoked    = TRUE,
 			updated_at = now()
-		WHERE token = $1
+		WHERE token_hash = $1
 	`
 
-	cmdTag, err := db.Exec(ctx, q, token)
+	cmdTag, err := db.Exec(ctx, q, tokenHash)
 	if err != nil {
 		return fmt.Errorf("failed to revoke refresh token: %w", err)
 	}

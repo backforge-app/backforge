@@ -104,19 +104,19 @@ func (mr *MockSessionRepositoryMockRecorder) Create(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSessionRepository)(nil).Create), arg0, arg1)
 }
 
-// GetByToken mocks base method.
-func (m *MockSessionRepository) GetByToken(arg0 context.Context, arg1 string) (*domain.Session, error) {
+// GetByTokenHash mocks base method.
+func (m *MockSessionRepository) GetByTokenHash(arg0 context.Context, arg1 string) (*domain.Session, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByToken", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetByTokenHash", arg0, arg1)
 	ret0, _ := ret[0].(*domain.Session)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetByToken indicates an expected call of GetByToken.
-func (mr *MockSessionRepositoryMockRecorder) GetByToken(arg0, arg1 interface{}) *gomock.Call {
+// GetByTokenHash indicates an expected call of GetByTokenHash.
+func (mr *MockSessionRepositoryMockRecorder) GetByTokenHash(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByToken", reflect.TypeOf((*MockSessionRepository)(nil).GetByToken), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByTokenHash", reflect.TypeOf((*MockSessionRepository)(nil).GetByTokenHash), arg0, arg1)
 }
 
 // Revoke mocks base method.

@@ -67,7 +67,10 @@ func (r *UserQuestionRepository) GetByUserAndQuestion(
 }
 
 // ListByUser returns all progress entries for a given user.
-func (r *UserQuestionRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]*domain.UserQuestionProgress, error) {
+func (r *UserQuestionRepository) ListByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+) ([]*domain.UserQuestionProgress, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -107,7 +110,10 @@ func (r *UserQuestionRepository) ListByUser(ctx context.Context, userID uuid.UUI
 }
 
 // ListByUserAndTopic returns all progress entries for a user filtered by topic.
-func (r *UserQuestionRepository) ListByUserAndTopic(ctx context.Context, userID, topicID uuid.UUID) ([]*domain.UserQuestionProgress, error) {
+func (r *UserQuestionRepository) ListByUserAndTopic(
+	ctx context.Context,
+	userID, topicID uuid.UUID,
+) ([]*domain.UserQuestionProgress, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -142,7 +148,11 @@ func (r *UserQuestionRepository) ListByUserAndTopic(ctx context.Context, userID,
 }
 
 // SetStatus creates or updates the progress status for a specific user and question.
-func (r *UserQuestionRepository) SetStatus(ctx context.Context, userID, questionID uuid.UUID, status domain.ProgressStatus) error {
+func (r *UserQuestionRepository) SetStatus(
+	ctx context.Context,
+	userID, questionID uuid.UUID,
+	status domain.ProgressStatus,
+) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `

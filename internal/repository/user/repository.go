@@ -160,7 +160,7 @@ func scanUser(row pgx.Row) (*domain.User, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("scan user: %w", err)
 	}
 
 	return &u, nil

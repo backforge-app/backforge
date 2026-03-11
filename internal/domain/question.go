@@ -19,6 +19,15 @@ const (
 	QuestionLevelAdvanced QuestionLevel = 2
 )
 
+func (l QuestionLevel) IsValid() bool {
+	switch l {
+	case QuestionLevelBeginner, QuestionLevelMedium, QuestionLevelAdvanced:
+		return true
+	default:
+		return false
+	}
+}
+
 // QuestionCard is a lightweight representation of a question,
 // typically used for listing, previews, search results and cards in UI.
 type QuestionCard struct {
