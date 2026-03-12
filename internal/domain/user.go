@@ -30,10 +30,6 @@ type User struct {
 
 	Role UserRole
 
-	IsPro        bool
-	ProGrantedAt *time.Time
-	ProType      *string
-
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -43,23 +39,13 @@ func NewUser(
 	telegramID int64,
 	firstName string,
 	lastName, username, photoURL *string,
-	isPro bool,
 ) *User {
-	now := time.Now().UTC()
-	proType := "channel"
-
 	u := &User{
 		TelegramID: telegramID,
 		FirstName:  firstName,
 		LastName:   lastName,
 		Username:   username,
 		PhotoURL:   photoURL,
-		IsPro:      isPro,
-	}
-
-	if isPro {
-		u.ProGrantedAt = &now
-		u.ProType = &proType
 	}
 
 	return u

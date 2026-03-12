@@ -14,10 +14,6 @@ CREATE TABLE IF NOT EXISTS users
 
     role           user_role     NOT NULL DEFAULT 'user',
 
-    is_pro         boolean       NOT NULL DEFAULT FALSE,
-    pro_granted_at timestamptz,
-    pro_type       varchar(32)            DEFAULT 'channel',
-
     created_at     timestamptz   NOT NULL DEFAULT now(),
     updated_at     timestamptz   NOT NULL DEFAULT now()
 );

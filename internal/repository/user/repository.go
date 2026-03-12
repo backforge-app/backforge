@@ -38,11 +38,8 @@ func (r *Repository) Create(ctx context.Context, u *domain.User) (uuid.UUID, err
 			first_name,
 			last_name,
 		    photo_url,
-			role,
-			is_pro,
-			pro_granted_at,
-			pro_type
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			role
+		) VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
@@ -55,9 +52,6 @@ func (r *Repository) Create(ctx context.Context, u *domain.User) (uuid.UUID, err
 		u.LastName,
 		u.PhotoURL,
 		u.Role,
-		u.IsPro,
-		u.ProGrantedAt,
-		u.ProType,
 	).Scan(&id)
 
 	if err != nil {
@@ -91,9 +85,6 @@ func (r *Repository) GetByTelegramID(ctx context.Context, telegramID int64) (*do
 			last_name,
 			photo_url,
 			role,
-			is_pro,
-			pro_granted_at,
-			pro_type,
 			created_at,
 			updated_at
 		FROM users
@@ -121,9 +112,6 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, e
 			last_name,
 			photo_url,
 			role,
-			is_pro,
-			pro_granted_at,
-			pro_type,
 			created_at,
 			updated_at
 		FROM users
@@ -149,9 +137,6 @@ func scanUser(row pgx.Row) (*domain.User, error) {
 		&u.LastName,
 		&u.PhotoURL,
 		&u.Role,
-		&u.IsPro,
-		&u.ProGrantedAt,
-		&u.ProType,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -179,9 +164,6 @@ func (r *Repository) Update(ctx context.Context, u *domain.User) error {
 			last_name    	= $4,
 			photo_url    	= $5,
 			role            = $6,
-			is_pro          = $7,
-			pro_granted_at  = $8,
-			pro_type        = $9,
 			updated_at      = now()
 		WHERE id = $1
 	`
@@ -193,9 +175,6 @@ func (r *Repository) Update(ctx context.Context, u *domain.User) error {
 		u.LastName,
 		u.PhotoURL,
 		u.Role,
-		u.IsPro,
-		u.ProGrantedAt,
-		u.ProType,
 	)
 
 	if err != nil {

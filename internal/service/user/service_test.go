@@ -44,7 +44,6 @@ func TestUser_Create(t *testing.T) {
 				LastName:   &lastName,
 				Username:   &username,
 				PhotoURL:   &photoURL,
-				IsPro:      false,
 			},
 			mockSetup: func() {
 				repo.EXPECT().
@@ -59,7 +58,6 @@ func TestUser_Create(t *testing.T) {
 			input: CreateInput{
 				TelegramID: 54321,
 				FirstName:  "Alice",
-				IsPro:      true,
 			},
 			mockSetup: func() {
 				repo.EXPECT().
@@ -413,7 +411,6 @@ func TestUser_Update(t *testing.T) {
 				FirstName: ptr("NewFirst"),
 				LastName:  ptr("NewLast"),
 				Username:  ptr("new_username"),
-				IsPro:     ptr(true),
 			},
 			mockSetup: func() {
 				transactor.EXPECT().

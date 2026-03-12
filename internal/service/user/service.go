@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -45,7 +44,6 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (uuid.UUID, err
 		input.LastName,
 		input.Username,
 		input.PhotoURL,
-		input.IsPro,
 	)
 
 	id, err := s.userRepo.Create(ctx, u)
@@ -83,18 +81,6 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) error {
 		}
 		if input.Username != nil {
 			u.Username = input.Username
-		}
-		if input.IsPro != nil {
-			u.IsPro = *input.IsPro
-			if u.IsPro {
-				now := time.Now().UTC()
-				u.ProGrantedAt = &now
-				proType := "channel"
-				u.ProType = &proType
-			} else {
-				u.ProGrantedAt = nil
-				u.ProType = nil
-			}
 		}
 		if input.Role != nil {
 			u.Role = *input.Role
@@ -171,17 +157,6 @@ func (s *Service) UpdateProStatus(ctx context.Context, telegramID int64, isPro b
 				return ErrUserNotFound
 			}
 			return fmt.Errorf("get user: %w", err)
-		}
-
-		u.IsPro = isPro
-		if isPro {
-			now := time.Now().UTC()
-			u.ProGrantedAt = &now
-			proType := "channel"
-			u.ProType = &proType
-		} else {
-			u.ProGrantedAt = nil
-			u.ProType = nil
 		}
 
 		if err := s.userRepo.Update(txCtx, u); err != nil {
