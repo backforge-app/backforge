@@ -18,7 +18,6 @@ type CreateInput struct {
 	LastName   *string
 	Username   *string
 	PhotoURL   *string
-	IsPro      bool
 }
 
 // UpdateInput holds data for updating an existing user.
@@ -29,5 +28,4 @@ type UpdateInput struct {
 	Username  *string
 	PhotoURL  *string
 	Role      *domain.UserRole
-	IsPro     *bool
 }

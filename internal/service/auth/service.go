@@ -70,7 +70,6 @@ func (s *Service) LoginWithTelegram(
 		FirstName:  input.FirstName,
 		LastName:   input.LastName,
 		Username:   input.Username,
-		IsPro:      false,
 	}
 
 	u, err := s.users.GetOrCreateByTelegramID(ctx, userInput)
@@ -154,13 +153,12 @@ func (s *Service) generateAccessToken(user *domain.User) (string, error) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":    user.ID.String(),
-		"role":   user.Role,
-		"is_pro": user.IsPro,
-		"iss":    "backforge",
-		"aud":    "backforge-client",
-		"exp":    now.Add(s.authConfig.AccessTokenTTL).Unix(),
-		"iat":    now.Unix(),
+		"sub":  user.ID.String(),
+		"role": user.Role,
+		"iss":  "backforge",
+		"aud":  "backforge-client",
+		"exp":  now.Add(s.authConfig.AccessTokenTTL).Unix(),
+		"iat":  now.Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
