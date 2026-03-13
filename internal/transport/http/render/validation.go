@@ -21,17 +21,14 @@ import (
 )
 
 // validate is the shared validator instance used across the render package.
-// It is initialized once during package initialization.
-var validate *validator.Validate
-
-func init() {
-	validate = validator.New()
+// It is initialized once using a package-level function expression to avoid using init().
+var validate = func() *validator.Validate {
+	v := validator.New()
 
 	// RegisterTagNameFunc configures the validator to use JSON tag names
 	// instead of struct field names when reporting validation errors.
-	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
 		name := fld.Tag.Get("json")
-
 		if name == "" {
 			return fld.Name
 		}
@@ -44,7 +41,9 @@ func init() {
 
 		return name
 	})
-}
+
+	return v
+}()
 
 // Validate validates the provided struct using the configured validator.
 //
@@ -88,7 +87,6 @@ func ValidationErrors(err error) map[string]string {
 		field := e.Field()
 
 		switch e.Tag() {
-
 		case "required":
 			errs[field] = "field is required"
 
