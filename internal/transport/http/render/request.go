@@ -44,7 +44,7 @@ var (
 //	    // handle error
 //	}
 func Decode(r *http.Request, dst any) error {
-	if r.Body == nil {
+	if r.Body == nil || r.ContentLength == 0 {
 		return ErrEmptyBody
 	}
 
