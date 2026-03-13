@@ -80,11 +80,16 @@ func TestFailWithDetails(t *testing.T) {
 		require.Equal(t, "validation error", resp.Error)
 
 		actual := make(map[string]string)
+
 		if m, ok := resp.Details.(map[string]interface{}); ok {
 			for k, v := range m {
-				actual[k] = v.(string)
+				str, ok := v.(string)
+				require.True(t, ok)
+
+				actual[k] = str
 			}
 		}
+
 		require.Equal(t, details, actual)
 	})
 
@@ -101,11 +106,16 @@ func TestFailWithDetails(t *testing.T) {
 		require.Equal(t, "unknown error", resp.Error)
 
 		actual := make(map[string]string)
+
 		if m, ok := resp.Details.(map[string]interface{}); ok {
 			for k, v := range m {
-				actual[k] = v.(string)
+				str, ok := v.(string)
+				require.True(t, ok)
+
+				actual[k] = str
 			}
 		}
+
 		require.Equal(t, details, actual)
 	})
 }
