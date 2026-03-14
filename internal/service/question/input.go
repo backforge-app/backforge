@@ -57,10 +57,9 @@ type UpdateInput struct {
 
 // ListInput holds filters and pagination options for listing questions.
 type ListInput struct {
-	Limit   int
-	Offset  int
-	Level   *domain.QuestionLevel
-	TopicID *uuid.UUID
-	IsFree  *bool
-	TagIDs  []uuid.UUID
+	Limit  int
+	Offset int
+	Search *string
+	Level  *domain.QuestionLevel
+	Tags   []string
 }

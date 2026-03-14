@@ -188,12 +188,11 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (*domain.Question,
 // ListCards returns question cards with tags and "IsNew" flag, with pagination and filtering.
 func (s *Service) ListCards(ctx context.Context, input ListInput) ([]*domain.QuestionCard, error) {
 	opts := question.ListOptions{
-		Limit:   input.Limit,
-		Offset:  input.Offset,
-		Level:   input.Level,
-		TopicID: input.TopicID,
-		IsFree:  input.IsFree,
-		TagIDs:  input.TagIDs,
+		Limit:  input.Limit,
+		Offset: input.Offset,
+		Search: input.Search,
+		Level:  input.Level,
+		Tags:   input.Tags,
 	}
 	cards, err := s.questionRepo.ListCards(ctx, opts)
 	if err != nil {
