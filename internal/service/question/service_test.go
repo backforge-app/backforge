@@ -320,21 +320,56 @@ func TestQuestion_ListCards(t *testing.T) {
 	svc := NewService(repo, tagRepo, nil)
 
 	ctx := context.Background()
-	card1 := &domain.QuestionCard{ID: uuid.New(), Title: "Q1", Slug: "q1", Level: domain.QuestionLevelBeginner}
-	card2 := &domain.QuestionCard{ID: uuid.New(), Title: "Q2", Slug: "q2", Level: domain.QuestionLevelMedium}
 
-	input := ListInput{Limit: 10, Offset: 0}
+	card1 := &domain.QuestionCard{
+		ID:     uuid.New(),
+		Title:  "Q1",
+		Slug:   "q1",
+		Level:  domain.QuestionLevelBeginner,
+		Tags:   []string{"go", "postgresql"},
+		IsNew:  true,
+		IsFree: true,
+	}
+	card2 := &domain.QuestionCard{
+		ID:     uuid.New(),
+		Title:  "Q2",
+		Slug:   "q2",
+		Level:  domain.QuestionLevelMedium,
+		Tags:   []string{"go"},
+		IsNew:  false,
+		IsFree: false,
+	}
+
+	input := ListInput{
+		Limit:  10,
+		Offset: 0,
+		Search: ptrString("Q"),
+		Level:  ptrQuestionLevel(domain.QuestionLevelBeginner),
+		Tags:   []string{"go"},
+	}
 
 	repo.EXPECT().
-		ListCards(ctx, gomock.Any()).
-		Return([]*domain.QuestionCard{card1, card2}, nil)
+		ListCards(ctx, gomock.AssignableToTypeOf(question.ListOptions{})).
+		DoAndReturn(func(ctx context.Context, opts question.ListOptions) ([]*domain.QuestionCard, error) {
+			assert.Equal(t, 10, opts.Limit)
+			assert.Equal(t, 0, opts.Offset)
+			assert.NotNil(t, opts.Search)
+			assert.Equal(t, "Q", *opts.Search)
+			assert.NotNil(t, opts.Level)
+			assert.Equal(t, domain.QuestionLevelBeginner, *opts.Level)
+			assert.Equal(t, []string{"go"}, opts.Tags)
+			return []*domain.QuestionCard{card1, card2}, nil
+		})
 
 	result, err := svc.ListCards(ctx, input)
 	require.NoError(t, err)
-	assert.Len(t, result, 2)
+	require.Len(t, result, 2)
 	assert.Equal(t, "Q1", result[0].Title)
 	assert.Equal(t, "Q2", result[1].Title)
 }
+
+func ptrString(s string) *string                                    { return &s }
+func ptrQuestionLevel(l domain.QuestionLevel) *domain.QuestionLevel { return &l }
 
 func TestQuestion_ListByTopic(t *testing.T) {
 	ctrl := gomock.NewController(t)

@@ -246,11 +246,8 @@ type ListOptions struct {
 	Offset int
 	Search *string
 
-	Level   *domain.QuestionLevel
-	TopicID *uuid.UUID
-	IsFree  *bool
-
-	TagIDs []uuid.UUID
+	Level *domain.QuestionLevel
+	Tags  []string
 }
 
 // ListCards returns lightweight question representations (cards) according to the provided filters.
@@ -263,13 +260,11 @@ func (r *Repository) ListCards(ctx context.Context, opts ListOptions) ([]*domain
 		q.title,
 		q.slug,
 		q.level,
-		q.created_at > now() - interval '7 days' as is_new,
+		q.is_free,
+		q.created_at > now() - interval '3 days' as is_new,
 		COALESCE(
 			json_agg(
-				json_build_object(
-					'id', t.id,
-					'name', t.name
-				)
+				t.name
 			) FILTER (WHERE t.id IS NOT NULL),
 			'[]'
 		) as tags_json
@@ -294,28 +289,16 @@ func (r *Repository) ListCards(ctx context.Context, opts ListOptions) ([]*domain
 		arg++
 	}
 
-	if opts.TopicID != nil {
-		query += fmt.Sprintf(" AND q.topic_id = $%d", arg)
-		args = append(args, *opts.TopicID)
-		arg++
-	}
-
-	if opts.IsFree != nil {
-		query += fmt.Sprintf(" AND q.is_free = $%d", arg)
-		args = append(args, *opts.IsFree)
-		arg++
-	}
-
-	if len(opts.TagIDs) > 0 {
+	if len(opts.Tags) > 0 {
 		query += fmt.Sprintf(`
 		AND q.id IN (
 			SELECT question_id
-			FROM question_tags
-			WHERE tag_id = ANY($%d)
+			FROM question_tags qt
+			JOIN tags t2 ON t2.id = qt.tag_id
+			WHERE t2.name = ANY($%d)
 		)
 		`, arg)
-
-		args = append(args, opts.TagIDs)
+		args = append(args, opts.Tags)
 		arg++
 	}
 
@@ -324,24 +307,20 @@ func (r *Repository) ListCards(ctx context.Context, opts ListOptions) ([]*domain
 	ORDER BY q.created_at DESC
 	LIMIT $%d OFFSET $%d
 	`, arg, arg+1)
-
 	args = append(args, opts.Limit, opts.Offset)
 
 	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list cards: %w", err)
 	}
-
 	defer rows.Close()
 
 	var result []*domain.QuestionCard
-
 	for rows.Next() {
 		q, err := scanQuestionCard(rows)
 		if err != nil {
 			return nil, err
 		}
-
 		result = append(result, q)
 	}
 
@@ -357,10 +336,10 @@ func scanQuestionCard(row pgx.Row) (*domain.QuestionCard, error) {
 		&q.Title,
 		&q.Slug,
 		&q.Level,
+		&q.IsFree,
 		&q.IsNew,
 		&tagsJSON,
 	)
-
 	if err != nil {
 		return nil, err
 	}

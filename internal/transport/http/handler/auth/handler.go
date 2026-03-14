@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	serviceauth "github.com/backforge-app/backforge/internal/service/auth"
+	"github.com/backforge-app/backforge/internal/transport/http/httputil"
 	"github.com/backforge-app/backforge/internal/transport/http/render"
 )
 
@@ -18,46 +19,8 @@ type Handler struct {
 }
 
 // NewHandler creates a new authentication Handler with the provided service and logger.
-func NewHandler(
-	service Service,
-	log *zap.SugaredLogger,
-) *Handler {
-	return &Handler{
-		service: service,
-		log:     log,
-	}
-}
-
-// decodeAndValidate decodes JSON request and validates it.
-// Returns true if the request was invalid and response already sent.
-func (h *Handler) decodeAndValidate(r *http.Request, w http.ResponseWriter, dst any, action string) bool {
-	if err := render.Decode(r, dst); err != nil {
-		details := render.ValidationErrors(err)
-
-		if len(details) > 0 {
-			h.log.With(zap.Any("details", details)).
-				Warnf("%s validation failed", action)
-
-			if sendErr := render.FailWithDetails(w, http.StatusBadRequest, "validation failed", details); sendErr != nil {
-				h.log.With(zap.Error(sendErr)).
-					Warn("failed to send validation error response")
-			}
-
-			return true
-		}
-
-		h.log.With(zap.Error(err)).
-			Warnf("failed to decode %s request", action)
-
-		if sendErr := render.FailMessage(w, http.StatusBadRequest, "invalid request payload"); sendErr != nil {
-			h.log.With(zap.Error(sendErr)).
-				Warn("failed to send invalid payload response")
-		}
-
-		return true
-	}
-
-	return false
+func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
+	return &Handler{service: service, log: log}
 }
 
 // LoginHandler handles POST /login requests using Telegram login.
@@ -65,7 +28,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req loginRequest
-	if handled := h.decodeAndValidate(r, w, &req, "login"); handled {
+	if httputil.DecodeAndValidate(r, w, h.log, &req, "login") {
 		return
 	}
 
@@ -121,7 +84,7 @@ func (h *Handler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req refreshRequest
-	if handled := h.decodeAndValidate(r, w, &req, "refresh"); handled {
+	if httputil.DecodeAndValidate(r, w, h.log, &req, "refresh") {
 		return
 	}
 

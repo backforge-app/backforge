@@ -28,15 +28,29 @@ func (l QuestionLevel) IsValid() bool {
 	}
 }
 
+func (l QuestionLevel) String() string {
+	switch l {
+	case QuestionLevelBeginner:
+		return "Beginner"
+	case QuestionLevelMedium:
+		return "Medium"
+	case QuestionLevelAdvanced:
+		return "Advanced"
+	default:
+		return "Unknown"
+	}
+}
+
 // QuestionCard is a lightweight representation of a question,
 // typically used for listing, previews, search results and cards in UI.
 type QuestionCard struct {
-	ID    uuid.UUID
-	Title string
-	Slug  string
-	Level QuestionLevel
-	IsNew bool
-	Tags  []Tag
+	ID     uuid.UUID
+	Title  string
+	Slug   string
+	Level  QuestionLevel
+	IsFree bool
+	IsNew  bool
+	Tags   []string
 }
 
 // Question represents a question entity in the system.
