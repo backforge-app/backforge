@@ -72,26 +72,7 @@ func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := h.service.Create(ctx, input)
 	if err != nil {
-		switch {
-		case errors.Is(err, servicequestion.ErrQuestionAlreadyExists):
-			h.log.Warn("question already exists")
-			if sendErr := render.Fail(w, http.StatusConflict, ErrQuestionAlreadyExists); sendErr != nil {
-				h.log.With(zap.Error(sendErr)).Warn("failed to send conflict response")
-			}
-
-		case errors.Is(err, servicequestion.ErrQuestionInvalidData):
-			h.log.Warn("invalid question data")
-			if sendErr := render.Fail(w, http.StatusBadRequest, ErrQuestionInvalidData); sendErr != nil {
-				h.log.With(zap.Error(sendErr)).Warn("failed to send bad request response")
-			}
-
-		default:
-			h.log.With(zap.Error(err)).Error("create question service failed")
-			if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
-				h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
-			}
-		}
-
+		h.handleError(w, err, "create question")
 		return
 	}
 
@@ -149,26 +130,7 @@ func (h *Handler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.Update(ctx, input)
 	if err != nil {
-		switch {
-		case errors.Is(err, servicequestion.ErrQuestionNotFound):
-			h.log.Warn("question not found")
-			if sendErr := render.Fail(w, http.StatusNotFound, ErrQuestionNotFound); sendErr != nil {
-				h.log.With(zap.Error(sendErr)).Warn("failed to send not found response")
-			}
-
-		case errors.Is(err, servicequestion.ErrQuestionAlreadyExists):
-			h.log.Warn("question conflict")
-			if sendErr := render.Fail(w, http.StatusConflict, ErrQuestionAlreadyExists); sendErr != nil {
-				h.log.With(zap.Error(sendErr)).Warn("failed to send conflict response")
-			}
-
-		default:
-			h.log.With(zap.Error(err)).Error("update question service failed")
-			if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
-				h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
-			}
-		}
-
+		h.handleError(w, err, "update question")
 		return
 	}
 
@@ -373,5 +335,34 @@ func toResponse(q *domain.Question) questionResponse {
 		TagIDs:    tagIDs,
 		CreatedBy: q.CreatedBy,
 		UpdatedBy: q.UpdatedBy,
+	}
+}
+
+// handleError maps service-level errors to HTTP responses for question operations.
+func (h *Handler) handleError(w http.ResponseWriter, err error, action string) {
+	switch {
+	case errors.Is(err, servicequestion.ErrQuestionNotFound):
+		h.log.Warn("question not found")
+		if sendErr := render.Fail(w, http.StatusNotFound, ErrQuestionNotFound); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send not found response")
+		}
+
+	case errors.Is(err, servicequestion.ErrQuestionAlreadyExists):
+		h.log.Warn("question already exists")
+		if sendErr := render.Fail(w, http.StatusConflict, ErrQuestionAlreadyExists); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send conflict response")
+		}
+
+	case errors.Is(err, servicequestion.ErrQuestionInvalidData):
+		h.log.Warn("invalid question data")
+		if sendErr := render.Fail(w, http.StatusBadRequest, ErrQuestionInvalidData); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send bad request response")
+		}
+
+	default:
+		h.log.With(zap.Error(err)).Errorf("%s service failed", action)
+		if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
+		}
 	}
 }
