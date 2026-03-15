@@ -18,18 +18,18 @@ import (
 	"github.com/backforge-app/backforge/pkg/transactor"
 )
 
-// Tag handles operations related to Tag entities.
-type Tag struct {
+// Repository handles operations related to Tag entities.
+type Repository struct {
 	db transactor.DBTx
 }
 
-// NewTag creates a new Tag repository instance.
-func NewTag(db transactor.DBTx) *Tag {
-	return &Tag{db: db}
+// NewRepository creates a new Tag repository instance.
+func NewRepository(db transactor.DBTx) *Repository {
+	return &Repository{db: db}
 }
 
 // Create inserts a new tag into the database and returns its ID.
-func (r *Tag) Create(ctx context.Context, t *domain.Tag) (uuid.UUID, error) {
+func (r *Repository) Create(ctx context.Context, t *domain.Tag) (uuid.UUID, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -62,7 +62,7 @@ func (r *Tag) Create(ctx context.Context, t *domain.Tag) (uuid.UUID, error) {
 }
 
 // GetByID retrieves a tag by its UUID.
-func (r *Tag) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tag, error) {
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tag, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -86,7 +86,7 @@ func (r *Tag) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tag, error) {
 }
 
 // GetByName retrieves a tag by its name.
-func (r *Tag) GetByName(ctx context.Context, name string) (*domain.Tag, error) {
+func (r *Repository) GetByName(ctx context.Context, name string) (*domain.Tag, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -133,7 +133,7 @@ func scanTag(row pgx.Row) (*domain.Tag, error) {
 // Delete removes a tag from the database by its UUID.
 //
 // Returns ErrTagNotFound if the tag does not exist.
-func (r *Tag) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `DELETE FROM tags WHERE id = $1`
@@ -151,7 +151,7 @@ func (r *Tag) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // List retrieves all tags ordered by name.
-func (r *Tag) List(ctx context.Context) ([]*domain.Tag, error) {
+func (r *Repository) List(ctx context.Context) ([]*domain.Tag, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `

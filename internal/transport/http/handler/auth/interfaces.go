@@ -14,6 +14,6 @@ type Service interface {
 	// LoginWithTelegram authenticates the user via Telegram login.
 	LoginWithTelegram(ctx context.Context, input auth.TelegramLoginInput) (accessToken, refreshToken string, err error)
 
-	// RefreshTokens exchanges a valid refresh token for new access and refresh tokens.
-	RefreshTokens(ctx context.Context, refreshToken string) (accessToken, newRefreshToken string, err error)
+	// Refresh exchanges a valid refresh token for new access and refresh tokens.
+	Refresh(ctx context.Context, refreshToken string) (accessToken, newRefreshToken string, err error)
 }

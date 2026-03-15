@@ -170,7 +170,7 @@ func TestRefresh_Success(t *testing.T) {
 	req := refreshRequest{RefreshToken: "token"}
 
 	svc.EXPECT().
-		RefreshTokens(gomock.Any(), "token").
+		Refresh(gomock.Any(), "token").
 		Return("access-new", "refresh-new", nil)
 
 	rr := performRequest(handler.Refresh, req, t)
@@ -190,7 +190,7 @@ func TestRefresh_InvalidToken(t *testing.T) {
 	req := refreshRequest{RefreshToken: "bad"}
 
 	svc.EXPECT().
-		RefreshTokens(gomock.Any(), "bad").
+		Refresh(gomock.Any(), "bad").
 		Return("", "", serviceauth.ErrRefreshTokenInvalid)
 
 	rr := performRequest(handler.Refresh, req, t)
@@ -207,7 +207,7 @@ func TestRefresh_RevokedToken(t *testing.T) {
 	req := refreshRequest{RefreshToken: "revoked"}
 
 	svc.EXPECT().
-		RefreshTokens(gomock.Any(), "revoked").
+		Refresh(gomock.Any(), "revoked").
 		Return("", "", serviceauth.ErrRefreshTokenRevoked)
 
 	rr := performRequest(handler.Refresh, req, t)
@@ -224,7 +224,7 @@ func TestRefresh_TokenCollision(t *testing.T) {
 	req := refreshRequest{RefreshToken: "token"}
 
 	svc.EXPECT().
-		RefreshTokens(gomock.Any(), "token").
+		Refresh(gomock.Any(), "token").
 		Return("", "", serviceauth.ErrRefreshTokenAlreadyExists)
 
 	rr := performRequest(handler.Refresh, req, t)
@@ -241,7 +241,7 @@ func TestRefresh_InternalError(t *testing.T) {
 	req := refreshRequest{RefreshToken: "token"}
 
 	svc.EXPECT().
-		RefreshTokens(gomock.Any(), "token").
+		Refresh(gomock.Any(), "token").
 		Return("", "", errors.New("db failure"))
 
 	rr := performRequest(handler.Refresh, req, t)
