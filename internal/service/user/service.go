@@ -147,27 +147,3 @@ func (s *Service) GetOrCreateByTelegramID(ctx context.Context, input CreateInput
 	}
 	return s.GetByID(ctx, id)
 }
-
-// UpdateProStatus updates the Pro status for a user (separate method for common operation).
-func (s *Service) UpdateProStatus(ctx context.Context, telegramID int64, isPro bool) error {
-	err := s.transactor.WithinTx(ctx, func(txCtx context.Context) error {
-		u, err := s.userRepo.GetByTelegramID(txCtx, telegramID)
-		if err != nil {
-			if errors.Is(err, user.ErrUserNotFound) {
-				return ErrUserNotFound
-			}
-			return fmt.Errorf("get user: %w", err)
-		}
-
-		if err := s.userRepo.Update(txCtx, u); err != nil {
-			return fmt.Errorf("update user Pro status: %w", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
