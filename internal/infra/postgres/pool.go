@@ -1,7 +1,9 @@
-// Package postgres provides PostgreSQL infrastructure setup.
+// Package postgres provides PostgreSQL infrastructure and adapter setup.
 //
-// It contains initialization and configuration of the pgx connection pool
-// used by the application to interact with PostgreSQL.
+// It contains initialization and configuration of the pgx connection pool,
+// as well as adapters (PoolAdapter and TxAdapter) that allow the pool and
+// transactions to be used with the transactor package for safe transaction
+// management in repositories and services.
 package postgres
 
 import (
@@ -13,7 +15,18 @@ import (
 	"github.com/backforge-app/backforge/internal/config"
 )
 
-// NewPool creates a new connection pool with the given DSN and config.
+// NewPool creates a new PostgreSQL connection pool using the given DSN and pool configuration.
+//
+// The pool is configured with maximum and minimum connections, as well as maximum connection lifetime.
+//
+// Parameters:
+//   - ctx: the context for controlling pool creation timeout.
+//   - dsn: the PostgreSQL connection string.
+//   - cfg: the pool configuration (max/min connections, max lifetime).
+//
+// Returns:
+//   - *pgxpool.Pool: the initialized connection pool.
+//   - error: any error encountered during pool creation.
 func NewPool(ctx context.Context, dsn string, cfg config.PoolConfig) (*pgxpool.Pool, error) {
 	// Parse pool configuration for PostgreSQL connection.
 	poolConfig, err := pgxpool.ParseConfig(dsn)
