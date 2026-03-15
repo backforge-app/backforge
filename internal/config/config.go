@@ -157,6 +157,7 @@ func loadSensitiveValues(v *viper.Viper, cfg *Config) {
 	cfg.Postgres.User = v.GetString("postgres_user")
 	cfg.Postgres.Password = v.GetString("postgres_password")
 	cfg.Postgres.Database = v.GetString("postgres_db")
+	cfg.Client.URL = v.GetString("client.url")
 
 	if dbURL := v.GetString("database_url"); dbURL != "" {
 		cfg.Postgres.ConnectionURL = dbURL

@@ -1,0 +1,80 @@
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: backforge-server
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../.env
+    environment:
+      DB_HOST: ${APP_POSTGRES_HOST}
+      DB_PORT: ${APP_POSTGRES_PORT}
+      DB_USER: ${APP_POSTGRES_USER}
+      DB_PASSWORD: ${APP_POSTGRES_PASSWORD}
+      DB_NAME: ${APP_POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - backforge-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrator:
+    image: kukymbr/goose-docker:3.24.2
+    container_name: backforge-migrator
+    command: up
+    env_file:
+      - ../.env
+    environment:
+      GOOSE_DRIVER: ${GOOSE_DRIVER}
+      GOOSE_DBSTRING: ${GOOSE_DBSTRING}
+      GOOSE_MIGRATION_DIR: ${GOOSE_MIGRATION_DIR}
+      GOOSE_TABLE: ${GOOSE_TABLE}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "exit 0"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+    volumes:
+      - ../migrations:/migrations
+    networks:
+      - backforge-network
+
+  db:
+    image: postgres:16-alpine
+    container_name: backforge-postgres
+    restart: always
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_USER: ${APP_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${APP_POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backforge-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${APP_POSTGRES_USER} -d $${APP_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  backforge-network:
