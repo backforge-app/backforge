@@ -71,9 +71,9 @@ type Services struct {
 	Progress  *svcprogress.Service
 }
 
-// NewApp creates and wires all application dependencies.
+// New creates and wires all application dependencies.
 // It does NOT start the HTTP server yet.
-func NewApp(ctx context.Context) (*App, error) {
+func New(ctx context.Context) (*App, error) {
 	// Load config.
 	cfg, err := config.Load()
 	if err != nil {
