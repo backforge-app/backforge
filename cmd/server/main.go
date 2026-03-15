@@ -1,0 +1,31 @@
+// Package main provides the entry point for the Backforge server.
+//
+// It initializes the application, sets up signal handling for graceful shutdown,
+// and runs the HTTP server.
+package main
+
+import (
+	"context"
+	"log"
+	"os/signal"
+	"syscall"
+
+	"github.com/backforge-app/backforge/internal/app"
+)
+
+func main() {
+	// Create a context that is cancelled on SIGINT or SIGTERM signals.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// Initialize the application with all dependencies.
+	a, err := app.New(ctx)
+	if err != nil {
+		log.Fatalf("failed to create app: %v", err)
+	}
+
+	// Run the application (HTTP server) and block until it exits.
+	if err := a.Run(ctx); err != nil {
+		a.Logger.Fatalf("app stopped with error: %v", err)
+	}
+}
