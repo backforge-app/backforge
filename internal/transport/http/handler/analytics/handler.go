@@ -1,0 +1,119 @@
+// Package analytics implements HTTP handlers for analytics management.
+package analytics
+
+import (
+	"net/http"
+
+	"go.uber.org/zap"
+
+	"github.com/backforge-app/backforge/internal/transport/http/middleware"
+	"github.com/backforge-app/backforge/internal/transport/http/render"
+)
+
+// Handler handles analytics-related HTTP requests.
+type Handler struct {
+	service Service
+	log     *zap.SugaredLogger
+}
+
+// NewHandler creates a new analytics Handler.
+func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
+	return &Handler{
+		service: service,
+		log:     log,
+	}
+}
+
+// GetOverallProgressHandler handles GET /analytics/overall requests.
+// It retrieves aggregated statistics for the authenticated user dashboard.
+func (h *Handler) GetOverallProgressHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Assuming user ID is passed as a URL param. Alternatively, extract it from auth middleware context.
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		h.log.Warn("unauthorized access")
+
+		if sendErr := render.Fail(w, http.StatusUnauthorized, ErrUnauthorized); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send unauthorized response")
+		}
+		return
+	}
+
+	progress, err := h.service.GetOverallProgress(ctx, userID)
+	if err != nil {
+		h.log.With(zap.Error(err)).Error("get overall progress service failed")
+		if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
+		}
+		return
+	}
+
+	if sendErr := render.OK(w, toOverallProgressResponse(progress)); sendErr != nil {
+		h.log.With(zap.Error(sendErr)).Warn("failed to send overall progress response")
+	}
+}
+
+// GetProgressByTopicPercentHandler handles GET /analytics/topics requests.
+// It returns completion percentages for each topic for the authenticated user.
+func (h *Handler) GetProgressByTopicPercentHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		h.log.Warn("unauthorized access")
+
+		if sendErr := render.Fail(w, http.StatusUnauthorized, ErrUnauthorized); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send unauthorized response")
+		}
+		return
+	}
+
+	topicProgress, err := h.service.GetProgressByTopicPercent(ctx, userID)
+	if err != nil {
+		h.log.With(zap.Error(err)).Error("get topic progress percentages service failed")
+		if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
+		}
+		return
+	}
+
+	resp := make([]TopicProgressPercentResponse, len(topicProgress))
+	for i, p := range topicProgress {
+		resp[i] = toTopicProgressPercentResponse(p)
+	}
+
+	if sendErr := render.OK(w, resp); sendErr != nil {
+		h.log.With(zap.Error(sendErr)).Warn("failed to send topic progress response")
+	}
+}
+
+// ResetAllProgressHandler handles DELETE /analytics/reset requests.
+// It resets all stored question and topic progress for the authenticated user.
+func (h *Handler) ResetAllProgressHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		h.log.Warn("unauthorized access")
+
+		if sendErr := render.Fail(w, http.StatusUnauthorized, ErrUnauthorized); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send unauthorized response")
+		}
+		return
+	}
+
+	err := h.service.ResetAllProgress(ctx, userID)
+	if err != nil {
+		h.log.With(zap.Error(err)).Error("reset all progress service failed")
+		if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
+		}
+		return
+	}
+
+	// Respond with an empty 200 OK or 204 No Content
+	if sendErr := render.OK(w, nil); sendErr != nil {
+		h.log.With(zap.Error(sendErr)).Warn("failed to send reset progress response")
+	}
+}

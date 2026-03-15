@@ -195,7 +195,6 @@ func (h *Handler) processMarkAction(
 // handleError maps service-level errors to HTTP responses with appropriate status codes and logging.
 func (h *Handler) handleError(w http.ResponseWriter, err error, action string) {
 	switch {
-
 	case errors.Is(err, progress.ErrInvalidProgressStatus):
 		h.log.Warn("invalid progress status")
 
