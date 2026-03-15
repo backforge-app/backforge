@@ -12,19 +12,19 @@ import (
 	"github.com/backforge-app/backforge/pkg/transactor"
 )
 
-// QuestionTag handles operations related to question-tag associations.
-type QuestionTag struct {
+// Repository handles operations related to question-tag associations.
+type Repository struct {
 	db transactor.DBTx
 }
 
-// NewQuestionTag creates a new QuestionTag repository instance.
-func NewQuestionTag(db transactor.DBTx) *QuestionTag {
-	return &QuestionTag{db: db}
+// NewRepository creates a new QuestionTag repository instance.
+func NewRepository(db transactor.DBTx) *Repository {
+	return &Repository{db: db}
 }
 
 // AddTagsToQuestion inserts multiple tag links for a question.
 // Uses ON CONFLICT DO NOTHING to avoid duplicates.
-func (r *QuestionTag) AddTagsToQuestion(ctx context.Context, questionID uuid.UUID, tagIDs []uuid.UUID) error {
+func (r *Repository) AddTagsToQuestion(ctx context.Context, questionID uuid.UUID, tagIDs []uuid.UUID) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	for _, tagID := range tagIDs {
@@ -42,7 +42,7 @@ func (r *QuestionTag) AddTagsToQuestion(ctx context.Context, questionID uuid.UUI
 }
 
 // RemoveTagsFromQuestion deletes specific tag links for a question.
-func (r *QuestionTag) RemoveTagsFromQuestion(ctx context.Context, questionID uuid.UUID, tagIDs []uuid.UUID) error {
+func (r *Repository) RemoveTagsFromQuestion(ctx context.Context, questionID uuid.UUID, tagIDs []uuid.UUID) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	for _, tagID := range tagIDs {
@@ -59,7 +59,7 @@ func (r *QuestionTag) RemoveTagsFromQuestion(ctx context.Context, questionID uui
 }
 
 // RemoveAllForQuestion deletes all tag links for a specific question.
-func (r *QuestionTag) RemoveAllForQuestion(ctx context.Context, questionID uuid.UUID) error {
+func (r *Repository) RemoveAllForQuestion(ctx context.Context, questionID uuid.UUID) error {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `
@@ -75,7 +75,7 @@ func (r *QuestionTag) RemoveAllForQuestion(ctx context.Context, questionID uuid.
 }
 
 // ListTagsForQuestion returns all tags linked to a specific question, ordered by tag name.
-func (r *QuestionTag) ListTagsForQuestion(ctx context.Context, questionID uuid.UUID) ([]*domain.Tag, error) {
+func (r *Repository) ListTagsForQuestion(ctx context.Context, questionID uuid.UUID) ([]*domain.Tag, error) {
 	db := transactor.GetDB(ctx, r.db)
 
 	const q = `

@@ -88,7 +88,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, newRefreshToken, err := h.service.RefreshTokens(ctx, req.RefreshToken)
+	accessToken, newRefreshToken, err := h.service.Refresh(ctx, req.RefreshToken)
 	if err != nil {
 		switch {
 		case errors.Is(err, serviceauth.ErrRefreshTokenInvalid):
