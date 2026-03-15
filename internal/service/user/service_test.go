@@ -464,6 +464,72 @@ func TestUser_Update(t *testing.T) {
 	}
 }
 
+func TestUser_IsAdmin(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := NewMockRepository(ctrl)
+	svc := NewService(repo, nil)
+
+	ctx := context.Background()
+	userID := uuid.New()
+
+	tests := []struct {
+		name        string
+		mockSetup   func()
+		expectedRes bool
+		expectedErr error
+	}{
+		{
+			name: "Success - user is admin",
+			mockSetup: func() {
+				repo.EXPECT().
+					IsAdmin(ctx, userID).
+					Return(true, nil)
+			},
+			expectedRes: true,
+			expectedErr: nil,
+		},
+		{
+			name: "Success - user is not admin",
+			mockSetup: func() {
+				repo.EXPECT().
+					IsAdmin(ctx, userID).
+					Return(false, nil)
+			},
+			expectedRes: false,
+			expectedErr: nil,
+		},
+		{
+			name: "Fail - repository error",
+			mockSetup: func() {
+				repo.EXPECT().
+					IsAdmin(ctx, userID).
+					Return(false, errors.New("db error"))
+			},
+			expectedRes: false,
+			expectedErr: errors.New("check if user is admin: db error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			res, err := svc.IsAdmin(ctx, userID)
+
+			if tt.expectedErr != nil {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.expectedErr.Error())
+				assert.Equal(t, tt.expectedRes, res)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedRes, res)
+			}
+		})
+	}
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }

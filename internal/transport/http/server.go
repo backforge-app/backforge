@@ -79,7 +79,6 @@ func (s *Server) Run(ctx context.Context) error {
 	}()
 
 	select {
-
 	case <-ctx.Done():
 
 		s.log.Info("http server shutdown initiated")
