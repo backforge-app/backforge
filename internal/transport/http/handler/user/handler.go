@@ -1,0 +1,69 @@
+// Package user implements HTTP handlers for user management.
+package user
+
+import (
+	"errors"
+	"net/http"
+
+	"go.uber.org/zap"
+
+	serviceuser "github.com/backforge-app/backforge/internal/service/user"
+	"github.com/backforge-app/backforge/internal/transport/http/middleware"
+	"github.com/backforge-app/backforge/internal/transport/http/render"
+)
+
+// Handler handles user-related HTTP requests.
+type Handler struct {
+	service Service
+	log     *zap.SugaredLogger
+}
+
+// NewHandler creates a new user Handler.
+func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
+	return &Handler{
+		service: service,
+		log:     log,
+	}
+}
+
+// GetProfile handles GET /users/me requests.
+// It returns the authenticated user's profile based on the ID in the context.
+func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		h.log.Warn("unauthorized access attempt to profile")
+		if sendErr := render.Fail(w, http.StatusUnauthorized, ErrUnauthorized); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send unauthorized response")
+		}
+		return
+	}
+
+	u, err := h.service.GetByID(ctx, userID)
+	if err != nil {
+		h.handleError(w, err, "get profile")
+		return
+	}
+
+	if sendErr := render.OK(w, toUserResponse(u)); sendErr != nil {
+		h.log.With(zap.Error(sendErr)).Warn("failed to send profile response")
+	}
+}
+
+// handleError maps service-level errors to HTTP responses for user operations.
+func (h *Handler) handleError(w http.ResponseWriter, err error, action string) {
+	switch {
+	case errors.Is(err, serviceuser.ErrUserNotFound):
+		h.log.Warn("user not found")
+		if sendErr := render.Fail(w, http.StatusNotFound, ErrUserNotFound); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send not found response")
+		}
+
+	default:
+		h.log.With(zap.Error(err)).Errorf("%s service failed", action)
+		if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
+		}
+	}
+}
