@@ -23,8 +23,8 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
-// LoginHandler handles POST /login requests using Telegram login.
-func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+// Login handles POST /login requests using Telegram login.
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req loginRequest
@@ -79,8 +79,8 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// RefreshHandler handles POST /refresh requests.
-func (h *Handler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
+// Refresh handles POST /refresh requests.
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req refreshRequest

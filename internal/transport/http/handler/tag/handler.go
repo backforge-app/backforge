@@ -23,8 +23,8 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
-// CreateHandler handles POST /tags requests.
-func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
+// Create handles POST /tags requests.
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req createRequest
@@ -44,8 +44,8 @@ func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetByIDHandler handles GET /tags/{id} requests.
-func (h *Handler) GetByIDHandler(w http.ResponseWriter, r *http.Request) {
+// GetByID handles GET /tags/{id} requests.
+func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	id, ok := httputil.URLParamUUID(r, "id")
@@ -68,8 +68,8 @@ func (h *Handler) GetByIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ListHandler handles GET /tags requests.
-func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
+// List handles GET /tags requests.
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	tags, err := h.service.List(ctx)
@@ -88,8 +88,8 @@ func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// DeleteHandler handles DELETE /tags/{id} requests.
-func (h *Handler) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+// Delete handles DELETE /tags/{id} requests.
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	id, ok := httputil.URLParamUUID(r, "id")

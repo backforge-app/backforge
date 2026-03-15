@@ -147,3 +147,15 @@ func (s *Service) GetOrCreateByTelegramID(ctx context.Context, input CreateInput
 	}
 	return s.GetByID(ctx, id)
 }
+
+// IsAdmin checks if a user has the admin role.
+// Returns true if user is admin, false if not.
+// Returns an error if the user does not exist or DB query fails.
+func (s *Service) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
+	isAdmin, err := s.userRepo.IsAdmin(ctx, userID)
+	if err != nil {
+		// Wrap repository error for service-level clarity
+		return false, fmt.Errorf("check if user is admin: %w", err)
+	}
+	return isAdmin, nil
+}

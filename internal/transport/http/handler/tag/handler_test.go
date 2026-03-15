@@ -34,7 +34,7 @@ func addChiContext(r *http.Request, key, value string) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 }
 
-func TestHandler_CreateHandler(t *testing.T) {
+func TestHandler_Create(t *testing.T) {
 	mockService, handler := setupTest(t)
 	tagID := uuid.New()
 	userID := uuid.New()
@@ -93,13 +93,13 @@ func TestHandler_CreateHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/tags", bytes.NewReader(body))
 			rr := httptest.NewRecorder()
 
-			handler.CreateHandler(rr, req)
+			handler.Create(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_GetByIDHandler(t *testing.T) {
+func TestHandler_GetByID(t *testing.T) {
 	mockService, handler := setupTest(t)
 	tagID := uuid.New()
 
@@ -144,13 +144,13 @@ func TestHandler_GetByIDHandler(t *testing.T) {
 			req = addChiContext(req, "id", tt.idParam)
 			rr := httptest.NewRecorder()
 
-			handler.GetByIDHandler(rr, req)
+			handler.GetByID(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_ListHandler(t *testing.T) {
+func TestHandler_List(t *testing.T) {
 	mockService, handler := setupTest(t)
 
 	tests := []struct {
@@ -184,13 +184,13 @@ func TestHandler_ListHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/tags", nil)
 			rr := httptest.NewRecorder()
 
-			handler.ListHandler(rr, req)
+			handler.List(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_DeleteHandler(t *testing.T) {
+func TestHandler_Delete(t *testing.T) {
 	mockService, handler := setupTest(t)
 	tagID := uuid.New()
 
@@ -229,7 +229,7 @@ func TestHandler_DeleteHandler(t *testing.T) {
 			req = addChiContext(req, "id", tt.idParam)
 			rr := httptest.NewRecorder()
 
-			handler.DeleteHandler(rr, req)
+			handler.Delete(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}

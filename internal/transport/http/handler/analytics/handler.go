@@ -24,9 +24,9 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	}
 }
 
-// GetOverallProgressHandler handles GET /analytics/overall requests.
+// GetOverallProgress handles GET /analytics/overall requests.
 // It retrieves aggregated statistics for the authenticated user dashboard.
-func (h *Handler) GetOverallProgressHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetOverallProgress(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Assuming user ID is passed as a URL param. Alternatively, extract it from auth middleware context.
@@ -54,9 +54,9 @@ func (h *Handler) GetOverallProgressHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// GetProgressByTopicPercentHandler handles GET /analytics/topics requests.
+// GetProgressByTopicPercent handles GET /analytics/topics requests.
 // It returns completion percentages for each topic for the authenticated user.
-func (h *Handler) GetProgressByTopicPercentHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetProgressByTopicPercent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	userID, ok := middleware.UserIDFromContext(ctx)
@@ -88,9 +88,9 @@ func (h *Handler) GetProgressByTopicPercentHandler(w http.ResponseWriter, r *htt
 	}
 }
 
-// ResetAllProgressHandler handles DELETE /analytics/reset requests.
+// ResetAllProgress handles DELETE /analytics/reset requests.
 // It resets all stored question and topic progress for the authenticated user.
-func (h *Handler) ResetAllProgressHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ResetAllProgress(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	userID, ok := middleware.UserIDFromContext(ctx)

@@ -25,8 +25,8 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
-// CreateHandler handles POST /topics requests.
-func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
+// Create handles POST /topics requests.
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req createRequest
@@ -58,8 +58,8 @@ func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UpdateHandler handles PUT /topics/{id} requests.
-func (h *Handler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
+// Update handles PUT /topics/{id} requests.
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req updateRequest
@@ -95,8 +95,8 @@ func (h *Handler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetByIDHandler handles GET /topics/{id} requests.
-func (h *Handler) GetByIDHandler(w http.ResponseWriter, r *http.Request) {
+// GetByID handles GET /topics/{id} requests.
+func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	id, ok := httputil.URLParamUUID(r, "id")
@@ -131,8 +131,8 @@ func (h *Handler) GetByIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetBySlugHandler handles GET /topics/slug/{slug} requests.
-func (h *Handler) GetBySlugHandler(w http.ResponseWriter, r *http.Request) {
+// GetBySlug handles GET /topics/slug/{slug} requests.
+func (h *Handler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	slug := chi.URLParam(r, "slug")
@@ -167,9 +167,9 @@ func (h *Handler) GetBySlugHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ListRowsHandler handles GET /topics requests.
+// ListRows handles GET /topics requests.
 // It retrieves a list of topics formatted as rows, including question counts.
-func (h *Handler) ListRowsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListRows(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	rows, err := h.service.ListRows(ctx)
