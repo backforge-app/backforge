@@ -45,7 +45,7 @@ func NewRouter(
 	// --- Global middleware (RequestID, Logger, Recovery, etc.) ---
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
-	r.Use(chimw.Logger)
+	r.Use(mw.Logger(log))
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(60 * time.Second))
 	r.Use(cors.Handler(cors.Options{
