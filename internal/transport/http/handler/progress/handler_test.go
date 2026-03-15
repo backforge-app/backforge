@@ -38,7 +38,7 @@ func addChiContext(r *http.Request, key, value string) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 }
 
-func TestHandler_MarkHandlers(t *testing.T) {
+func TestHandler_Mark(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 	topicID := uuid.New()
@@ -64,7 +64,7 @@ func TestHandler_MarkHandlers(t *testing.T) {
 	}{
 		{
 			name:   "MarkKnown Success",
-			method: handler.MarkKnownHandler,
+			method: handler.MarkKnown,
 			mockSetup: func() {
 				mockService.EXPECT().MarkKnown(gomock.Any(), input).Return(nil)
 			},
@@ -73,14 +73,14 @@ func TestHandler_MarkHandlers(t *testing.T) {
 		},
 		{
 			name:           "MarkLearned Unauthorized",
-			method:         handler.MarkLearnedHandler,
+			method:         handler.MarkLearned,
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnauthorized,
 			auth:           false,
 		},
 		{
 			name:   "MarkSkipped Service Error",
-			method: handler.MarkSkippedHandler,
+			method: handler.MarkSkipped,
 			mockSetup: func() {
 				mockService.EXPECT().MarkSkipped(gomock.Any(), input).Return(serviceprogress.ErrInvalidProgressStatus)
 			},
@@ -107,7 +107,7 @@ func TestHandler_MarkHandlers(t *testing.T) {
 	}
 }
 
-func TestHandler_GetTopicProgressHandler(t *testing.T) {
+func TestHandler_GetTopicProgress(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 	topicID := uuid.New()
@@ -154,13 +154,13 @@ func TestHandler_GetTopicProgressHandler(t *testing.T) {
 			req = addChiContext(req, "id", tt.idParam)
 			rr := httptest.NewRecorder()
 
-			handler.GetTopicProgressHandler(rr, req)
+			handler.GetTopicProgress(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_GetQuestionProgressHandler(t *testing.T) {
+func TestHandler_GetQuestionProgress(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 	questionID := uuid.New()
@@ -201,13 +201,13 @@ func TestHandler_GetQuestionProgressHandler(t *testing.T) {
 			req = addChiContext(req, "id", tt.idParam)
 			rr := httptest.NewRecorder()
 
-			handler.GetQuestionProgressHandler(rr, req)
+			handler.GetQuestionProgress(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_ResetTopicHandler(t *testing.T) {
+func TestHandler_ResetTopic(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 	topicID := uuid.New()
@@ -222,7 +222,7 @@ func TestHandler_ResetTopicHandler(t *testing.T) {
 		req = addChiContext(req, "id", topicID.String())
 		rr := httptest.NewRecorder()
 
-		handler.ResetTopicHandler(rr, req)
+		handler.ResetTopic(rr, req)
 		assert.Equal(t, http.StatusOK, rr.Code)
 	})
 }

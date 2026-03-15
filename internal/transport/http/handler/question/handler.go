@@ -41,8 +41,8 @@ func levelFromString(s string) (domain.QuestionLevel, bool) {
 	}
 }
 
-// CreateHandler handles POST /questions requests.
-func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
+// Create handles POST /questions requests.
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req createRequest
@@ -83,8 +83,8 @@ func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UpdateHandler handles PUT /questions/{id} requests.
-func (h *Handler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
+// Update handles PUT /questions/{id} requests.
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req updateRequest
@@ -139,10 +139,10 @@ func (h *Handler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetByIDHandler handles GET /admin/questions/{id} requests.
+// GetByID handles GET /admin/questions/{id} requests.
 // It returns the full question including its content.
 // This endpoint is intended for admin use.
-func (h *Handler) GetByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	id, ok := httputil.URLParamUUID(r, "id")
@@ -178,9 +178,9 @@ func (h *Handler) GetByIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetBySlugHandler handles GET /questions/{slug} requests.
+// GetBySlug handles GET /questions/{slug} requests.
 // It retrieves a question by its slug.
-func (h *Handler) GetBySlugHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	slug := chi.URLParam(r, "slug")
@@ -215,9 +215,9 @@ func (h *Handler) GetBySlugHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ListCardsHandler handles GET /questions.
+// ListCards handles GET /questions.
 // Returns a list of questions with filtering and pagination via query params.
-func (h *Handler) ListCardsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListCards(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	limit := httputil.ParseQueryInt(r, "limit", 20)
@@ -284,9 +284,9 @@ func (h *Handler) ListCardsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ListByTopicHandler handles GET /topics/{id}/questions.
+// ListByTopic handles GET /topics/{id}/questions.
 // Returns all questions on the topic.
-func (h *Handler) ListByTopicHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListByTopic(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	topicID, ok := httputil.URLParamUUID(r, "id")

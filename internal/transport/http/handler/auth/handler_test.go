@@ -54,7 +54,7 @@ func decodeBody(t *testing.T, rr *httptest.ResponseRecorder, dst any) {
 	assert.NoError(t, err)
 }
 
-func TestLoginHandler_Success(t *testing.T) {
+func TestLogin_Success(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := loginRequest{
@@ -73,7 +73,7 @@ func TestLoginHandler_Success(t *testing.T) {
 
 	svc.EXPECT().LoginWithTelegram(gomock.Any(), expectedInput).Return("access", "refresh", nil)
 
-	rr := performRequest(handler.LoginHandler, req, t)
+	rr := performRequest(handler.Login, req, t)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -83,7 +83,7 @@ func TestLoginHandler_Success(t *testing.T) {
 	assert.Equal(t, "refresh", resp.RefreshToken)
 }
 
-func TestLoginHandler_InvalidTelegramAuth(t *testing.T) {
+func TestLogin_InvalidTelegramAuth(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := loginRequest{
@@ -97,7 +97,7 @@ func TestLoginHandler_InvalidTelegramAuth(t *testing.T) {
 		LoginWithTelegram(gomock.Any(), gomock.Any()).
 		Return("", "", serviceauth.ErrInvalidTelegramAuth)
 
-	rr := performRequest(handler.LoginHandler, req, t)
+	rr := performRequest(handler.Login, req, t)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	var resp map[string]any
@@ -105,7 +105,7 @@ func TestLoginHandler_InvalidTelegramAuth(t *testing.T) {
 	assert.Equal(t, ErrInvalidCredentials.Error(), resp["error"])
 }
 
-func TestLoginHandler_TelegramAuthExpired(t *testing.T) {
+func TestLogin_TelegramAuthExpired(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := loginRequest{
@@ -119,7 +119,7 @@ func TestLoginHandler_TelegramAuthExpired(t *testing.T) {
 		LoginWithTelegram(gomock.Any(), gomock.Any()).
 		Return("", "", serviceauth.ErrTelegramAuthExpired)
 
-	rr := performRequest(handler.LoginHandler, req, t)
+	rr := performRequest(handler.Login, req, t)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	var resp map[string]any
@@ -127,7 +127,7 @@ func TestLoginHandler_TelegramAuthExpired(t *testing.T) {
 	assert.Equal(t, ErrInvalidCredentials.Error(), resp["error"])
 }
 
-func TestLoginHandler_InternalError(t *testing.T) {
+func TestLogin_InternalError(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := loginRequest{
@@ -141,7 +141,7 @@ func TestLoginHandler_InternalError(t *testing.T) {
 		LoginWithTelegram(gomock.Any(), gomock.Any()).
 		Return("", "", errors.New("db failure"))
 
-	rr := performRequest(handler.LoginHandler, req, t)
+	rr := performRequest(handler.Login, req, t)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 	var resp map[string]any
@@ -149,14 +149,14 @@ func TestLoginHandler_InternalError(t *testing.T) {
 	assert.Equal(t, ErrInternalServer.Error(), resp["error"])
 }
 
-func TestLoginHandler_InvalidJSON(t *testing.T) {
+func TestLogin_InvalidJSON(t *testing.T) {
 	handler, _ := newHandlerMocks(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString("{invalid"))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	handler.LoginHandler(rr, req)
+	handler.Login(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	var resp map[string]any
@@ -164,7 +164,7 @@ func TestLoginHandler_InvalidJSON(t *testing.T) {
 	assert.Equal(t, "invalid request payload", resp["error"])
 }
 
-func TestRefreshHandler_Success(t *testing.T) {
+func TestRefresh_Success(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := refreshRequest{RefreshToken: "token"}
@@ -173,7 +173,7 @@ func TestRefreshHandler_Success(t *testing.T) {
 		RefreshTokens(gomock.Any(), "token").
 		Return("access-new", "refresh-new", nil)
 
-	rr := performRequest(handler.RefreshHandler, req, t)
+	rr := performRequest(handler.Refresh, req, t)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -184,7 +184,7 @@ func TestRefreshHandler_Success(t *testing.T) {
 	assert.Equal(t, "refresh-new", resp.RefreshToken)
 }
 
-func TestRefreshHandler_InvalidToken(t *testing.T) {
+func TestRefresh_InvalidToken(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := refreshRequest{RefreshToken: "bad"}
@@ -193,7 +193,7 @@ func TestRefreshHandler_InvalidToken(t *testing.T) {
 		RefreshTokens(gomock.Any(), "bad").
 		Return("", "", serviceauth.ErrRefreshTokenInvalid)
 
-	rr := performRequest(handler.RefreshHandler, req, t)
+	rr := performRequest(handler.Refresh, req, t)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	var resp map[string]any
@@ -201,7 +201,7 @@ func TestRefreshHandler_InvalidToken(t *testing.T) {
 	assert.Equal(t, ErrInvalidCredentials.Error(), resp["error"])
 }
 
-func TestRefreshHandler_RevokedToken(t *testing.T) {
+func TestRefresh_RevokedToken(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := refreshRequest{RefreshToken: "revoked"}
@@ -210,7 +210,7 @@ func TestRefreshHandler_RevokedToken(t *testing.T) {
 		RefreshTokens(gomock.Any(), "revoked").
 		Return("", "", serviceauth.ErrRefreshTokenRevoked)
 
-	rr := performRequest(handler.RefreshHandler, req, t)
+	rr := performRequest(handler.Refresh, req, t)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	var resp map[string]any
@@ -218,7 +218,7 @@ func TestRefreshHandler_RevokedToken(t *testing.T) {
 	assert.Equal(t, ErrInvalidCredentials.Error(), resp["error"])
 }
 
-func TestRefreshHandler_TokenCollision(t *testing.T) {
+func TestRefresh_TokenCollision(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := refreshRequest{RefreshToken: "token"}
@@ -227,7 +227,7 @@ func TestRefreshHandler_TokenCollision(t *testing.T) {
 		RefreshTokens(gomock.Any(), "token").
 		Return("", "", serviceauth.ErrRefreshTokenAlreadyExists)
 
-	rr := performRequest(handler.RefreshHandler, req, t)
+	rr := performRequest(handler.Refresh, req, t)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 	var resp map[string]any
@@ -235,7 +235,7 @@ func TestRefreshHandler_TokenCollision(t *testing.T) {
 	assert.Equal(t, ErrInternalServer.Error(), resp["error"])
 }
 
-func TestRefreshHandler_InternalError(t *testing.T) {
+func TestRefresh_InternalError(t *testing.T) {
 	handler, svc := newHandlerMocks(t)
 
 	req := refreshRequest{RefreshToken: "token"}
@@ -244,7 +244,7 @@ func TestRefreshHandler_InternalError(t *testing.T) {
 		RefreshTokens(gomock.Any(), "token").
 		Return("", "", errors.New("db failure"))
 
-	rr := performRequest(handler.RefreshHandler, req, t)
+	rr := performRequest(handler.Refresh, req, t)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 	var resp map[string]any
@@ -252,12 +252,12 @@ func TestRefreshHandler_InternalError(t *testing.T) {
 	assert.Equal(t, ErrInternalServer.Error(), resp["error"])
 }
 
-func TestRefreshHandler_ValidationError(t *testing.T) {
+func TestRefresh_ValidationError(t *testing.T) {
 	handler, _ := newHandlerMocks(t)
 
 	req := refreshRequest{}
 
-	rr := performRequest(handler.RefreshHandler, req, t)
+	rr := performRequest(handler.Refresh, req, t)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 

@@ -34,7 +34,7 @@ func addChiContext(r *http.Request, key, value string) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 }
 
-func TestHandler_CreateHandler(t *testing.T) {
+func TestHandler_Create(t *testing.T) {
 	mockService, handler := setupTest(t)
 	topicID := uuid.New()
 	userID := uuid.New()
@@ -105,14 +105,14 @@ func TestHandler_CreateHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/topics", bytes.NewReader(body))
 			rr := httptest.NewRecorder()
 
-			handler.CreateHandler(rr, req)
+			handler.Create(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_UpdateHandler(t *testing.T) {
+func TestHandler_Update(t *testing.T) {
 	mockService, handler := setupTest(t)
 	topicID := uuid.New()
 	title := "New Title"
@@ -170,14 +170,14 @@ func TestHandler_UpdateHandler(t *testing.T) {
 			req = addChiContext(req, "id", tt.idParam)
 			rr := httptest.NewRecorder()
 
-			handler.UpdateHandler(rr, req)
+			handler.Update(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_GetByIDHandler(t *testing.T) {
+func TestHandler_GetByID(t *testing.T) {
 	mockService, handler := setupTest(t)
 	topicID := uuid.New()
 
@@ -216,14 +216,14 @@ func TestHandler_GetByIDHandler(t *testing.T) {
 			req = addChiContext(req, "id", tt.idParam)
 			rr := httptest.NewRecorder()
 
-			handler.GetByIDHandler(rr, req)
+			handler.GetByID(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_GetBySlugHandler(t *testing.T) {
+func TestHandler_GetBySlug(t *testing.T) {
 	mockService, handler := setupTest(t)
 	slug := "test-topic"
 
@@ -258,14 +258,14 @@ func TestHandler_GetBySlugHandler(t *testing.T) {
 			req = addChiContext(req, "slug", tt.slugParam)
 			rr := httptest.NewRecorder()
 
-			handler.GetBySlugHandler(rr, req)
+			handler.GetBySlug(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_ListRowsHandler(t *testing.T) {
+func TestHandler_ListRows(t *testing.T) {
 	mockService, handler := setupTest(t)
 
 	tests := []struct {
@@ -301,7 +301,7 @@ func TestHandler_ListRowsHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/topics", nil)
 			rr := httptest.NewRecorder()
 
-			handler.ListRowsHandler(rr, req)
+			handler.ListRows(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})

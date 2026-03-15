@@ -25,24 +25,24 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
-// MarkKnownHandler handles POST /progress/known requests.
-func (h *Handler) MarkKnownHandler(w http.ResponseWriter, r *http.Request) {
+// MarkKnown handles POST /progress/known requests.
+func (h *Handler) MarkKnown(w http.ResponseWriter, r *http.Request) {
 	h.processMarkAction(w, r, h.service.MarkKnown, "mark known")
 }
 
-// MarkLearnedHandler handles POST /progress/learned requests.
-func (h *Handler) MarkLearnedHandler(w http.ResponseWriter, r *http.Request) {
+// MarkLearned handles POST /progress/learned requests.
+func (h *Handler) MarkLearned(w http.ResponseWriter, r *http.Request) {
 	h.processMarkAction(w, r, h.service.MarkLearned, "mark learned")
 }
 
-// MarkSkippedHandler handles POST /progress/skipped requests.
-func (h *Handler) MarkSkippedHandler(w http.ResponseWriter, r *http.Request) {
+// MarkSkipped handles POST /progress/skipped requests.
+func (h *Handler) MarkSkipped(w http.ResponseWriter, r *http.Request) {
 	h.processMarkAction(w, r, h.service.MarkSkipped, "mark skipped")
 }
 
-// GetTopicProgressHandler handles GET /progress/topics/{id} requests.
+// GetTopicProgress handles GET /progress/topics/{id} requests.
 // It retrieves the aggregated progress for a specific topic for the authenticated user.
-func (h *Handler) GetTopicProgressHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetTopicProgress(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	userID, ok := middleware.UserIDFromContext(ctx)
@@ -80,9 +80,9 @@ func (h *Handler) GetTopicProgressHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// GetQuestionProgressHandler handles GET /progress/questions/{id} requests.
+// GetQuestionProgress handles GET /progress/questions/{id} requests.
 // It retrieves the progress of a specific question for the authenticated user.
-func (h *Handler) GetQuestionProgressHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetQuestionProgress(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	userID, ok := middleware.UserIDFromContext(ctx)
@@ -120,9 +120,9 @@ func (h *Handler) GetQuestionProgressHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// ResetTopicHandler handles DELETE /progress/topics/{id} requests.
+// ResetTopic handles DELETE /progress/topics/{id} requests.
 // It resets all progress data for the specified topic for the authenticated user.
-func (h *Handler) ResetTopicHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ResetTopic(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	userID, ok := middleware.UserIDFromContext(ctx)

@@ -194,3 +194,28 @@ func (r *Repository) Update(ctx context.Context, u *domain.User) error {
 
 	return nil
 }
+
+// IsAdmin checks if a user has the admin role.
+// Returns true if user.Role == "admin".
+// Returns false if user exists but is not an admin.
+// Returns an error if the user is not found or DB query fails.
+func (r *Repository) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
+	db := transactor.GetDB(ctx, r.db)
+
+	const q = `
+		SELECT role
+		FROM users
+		WHERE id = $1
+	`
+
+	var role string
+	err := db.QueryRow(ctx, q, userID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, ErrUserNotFound
+		}
+		return false, fmt.Errorf("failed to query user role: %w", err)
+	}
+
+	return role == "admin", nil
+}

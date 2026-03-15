@@ -111,7 +111,7 @@ func TestHandler_CreateHandler(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
 
-			handler.CreateHandler(rr, req)
+			handler.Create(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
@@ -181,7 +181,7 @@ func TestHandler_UpdateHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			handler.UpdateHandler(rr, req)
+			handler.Update(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
@@ -242,7 +242,7 @@ func TestHandler_GetByIDHandler(t *testing.T) {
 			req = addChiContext(req, "id", tt.questionIDStr)
 			rr := httptest.NewRecorder()
 
-			handler.GetByIDHandler(rr, req)
+			handler.GetByID(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
@@ -302,7 +302,7 @@ func TestHandler_ListCardsHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/questions"+tt.queryParams, nil)
 			rr := httptest.NewRecorder()
 
-			handler.ListCardsHandler(rr, req)
+			handler.ListCards(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
@@ -377,7 +377,7 @@ func TestHandler_ListByTopicHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			handler.ListByTopicHandler(rr, req)
+			handler.ListByTopic(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})

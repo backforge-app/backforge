@@ -30,7 +30,7 @@ func withAuthContext(r *http.Request, userID uuid.UUID) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), middleware.UserIDKey, userID))
 }
 
-func TestHandler_GetOverallProgressHandler(t *testing.T) {
+func TestHandler_GetOverallProgress(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 
@@ -83,13 +83,13 @@ func TestHandler_GetOverallProgressHandler(t *testing.T) {
 			}
 			rr := httptest.NewRecorder()
 
-			handler.GetOverallProgressHandler(rr, req)
+			handler.GetOverallProgress(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_GetProgressByTopicPercentHandler(t *testing.T) {
+func TestHandler_GetProgressByTopicPercent(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 
@@ -139,13 +139,13 @@ func TestHandler_GetProgressByTopicPercentHandler(t *testing.T) {
 			}
 			rr := httptest.NewRecorder()
 
-			handler.GetProgressByTopicPercentHandler(rr, req)
+			handler.GetProgressByTopicPercent(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}
 }
 
-func TestHandler_ResetAllProgressHandler(t *testing.T) {
+func TestHandler_ResetAllProgress(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 
@@ -192,7 +192,7 @@ func TestHandler_ResetAllProgressHandler(t *testing.T) {
 			}
 			rr := httptest.NewRecorder()
 
-			handler.ResetAllProgressHandler(rr, req)
+			handler.ResetAllProgress(rr, req)
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}

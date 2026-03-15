@@ -28,6 +28,12 @@ type Repository interface {
 
 	// GetByID retrieves a user by its unique identifier.
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
+
+	// IsAdmin checks if a user has the admin role.
+	// Returns true if user.Role == "admin".
+	// Returns false if user exists but is not an admin.
+	// Returns an error if the user is not found or DB query fails.
+	IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
 // Transactor provides transactional execution scope for database operations.

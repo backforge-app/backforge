@@ -1,0 +1,144 @@
+// Package http implements the main HTTP router for the Backforge API.
+package http
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"go.uber.org/zap"
+
+	"github.com/backforge-app/backforge/internal/transport/http/handler/analytics"
+	"github.com/backforge-app/backforge/internal/transport/http/handler/auth"
+	"github.com/backforge-app/backforge/internal/transport/http/handler/progress"
+	"github.com/backforge-app/backforge/internal/transport/http/handler/question"
+	"github.com/backforge-app/backforge/internal/transport/http/handler/tag"
+	"github.com/backforge-app/backforge/internal/transport/http/handler/topic"
+	"github.com/backforge-app/backforge/internal/transport/http/handler/user"
+	mw "github.com/backforge-app/backforge/internal/transport/http/middleware"
+)
+
+// Handlers bundles all handler instances for easy router wiring.
+type Handlers struct {
+	Auth      *auth.Handler
+	User      *user.Handler
+	Question  *question.Handler
+	Topic     *topic.Handler
+	Tag       *tag.Handler
+	Progress  *progress.Handler
+	Analytics *analytics.Handler
+}
+
+// NewRouter creates a production-ready HTTP router.
+func NewRouter(
+	log *zap.SugaredLogger,
+	handlers Handlers,
+	userSvc mw.UserRoleChecker,
+) http.Handler {
+	r := chi.NewRouter()
+
+	// --- Global middleware (RequestID, Logger, Recovery, etc.) ---
+	r.Use(chimw.RequestID)
+	r.Use(chimw.RealIP)
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
+	r.Use(chimw.Timeout(60 * time.Second))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	r.Route("/api/v1", func(r chi.Router) {
+		// --- Auth Routes ---
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", handlers.Auth.Login)
+			r.Post("/refresh", handlers.Auth.Refresh)
+		})
+
+		// --- Public Discovery Routes (No Auth Required) ---
+		// These allow unauthorized users to browse the catalog.
+		r.Route("/questions", func(r chi.Router) {
+			r.Get("/", handlers.Question.ListCards)
+			r.Get("/{slug}", handlers.Question.GetBySlug)
+		})
+
+		r.Route("/topics", func(r chi.Router) {
+			r.Get("/", handlers.Topic.ListRows)
+			r.Get("/slug/{slug}", handlers.Topic.GetBySlug)
+			r.Get("/{id}/questions", handlers.Question.ListByTopic)
+		})
+
+		// --- Protected Routes (Auth Required) ---
+		protected := chi.NewRouter()
+		protected.Use(mw.Auth(log))
+
+		// User profile
+		protected.Route("/users", func(r chi.Router) {
+			r.Get("/me", handlers.User.GetProfile)
+		})
+
+		// Question & Topic exploration
+		protected.Route("/questions", func(r chi.Router) {
+			r.Get("/{id}", handlers.Question.GetByID)
+		})
+		protected.Route("/topics", func(r chi.Router) {
+			r.Get("/{id}", handlers.Topic.GetByID)
+		})
+		protected.Route("/tags", func(r chi.Router) {
+			r.Get("/", handlers.Tag.List)
+		})
+
+		// Progress tracking
+		protected.Route("/progress", func(r chi.Router) {
+			r.Post("/known", handlers.Progress.MarkKnown)
+			r.Post("/learned", handlers.Progress.MarkLearned)
+			r.Post("/skipped", handlers.Progress.MarkSkipped)
+
+			r.Get("/topics/{id}", handlers.Progress.GetTopicProgress)
+			r.Delete("/topics/{id}", handlers.Progress.ResetTopic)
+			r.Get("/questions/{id}", handlers.Progress.GetQuestionProgress)
+		})
+
+		// Analytics & Dashboard
+		protected.Route("/analytics", func(r chi.Router) {
+			r.Get("/overall", handlers.Analytics.GetOverallProgress)
+			r.Get("/topics", handlers.Analytics.GetProgressByTopicPercent)
+			r.Delete("/reset", handlers.Analytics.ResetAllProgress)
+		})
+
+		// --- Admin routes ---
+		protected.Route("/admin", func(r chi.Router) {
+			r.Use(mw.AdminOnly(log, userSvc))
+
+			r.Route("/questions", func(r chi.Router) {
+				r.Post("/", handlers.Question.Create)
+				r.Get("/{id}", handlers.Question.GetByID)
+				r.Put("/{id}", handlers.Question.Update)
+			})
+			r.Route("/topics", func(r chi.Router) {
+				r.Post("/", handlers.Topic.Create)
+				r.Put("/{id}", handlers.Topic.Update)
+			})
+			r.Route("/tags", func(r chi.Router) {
+				r.Post("/", handlers.Tag.Create)
+				r.Delete("/{id}", handlers.Tag.Delete)
+			})
+		})
+
+		r.Mount("/", protected)
+	})
+
+	// --- Health check ---
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	return r
+}
