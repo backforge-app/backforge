@@ -81,6 +81,21 @@ func (mr *MockRepositoryMockRecorder) GetByTelegramID(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByTelegramID", reflect.TypeOf((*MockRepository)(nil).GetByTelegramID), arg0, arg1)
 }
 
+// IsAdmin mocks base method.
+func (m *MockRepository) IsAdmin(arg0 context.Context, arg1 uuid.UUID) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsAdmin", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsAdmin indicates an expected call of IsAdmin.
+func (mr *MockRepositoryMockRecorder) IsAdmin(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAdmin", reflect.TypeOf((*MockRepository)(nil).IsAdmin), arg0, arg1)
+}
+
 // Update mocks base method.
 func (m *MockRepository) Update(arg0 context.Context, arg1 *domain.User) error {
 	m.ctrl.T.Helper()

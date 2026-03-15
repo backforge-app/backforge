@@ -20,6 +20,7 @@ import (
 	"github.com/backforge-app/backforge/internal/transport/http/handler/topic"
 	"github.com/backforge-app/backforge/internal/transport/http/handler/user"
 	mw "github.com/backforge-app/backforge/internal/transport/http/middleware"
+	"github.com/backforge-app/backforge/internal/transport/http/render"
 )
 
 // Handlers bundles all handler instances for easy router wiring.
@@ -138,8 +139,11 @@ func NewRouter(
 
 	// --- Health check ---
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
+		if err := render.JSON(w, http.StatusOK, map[string]string{
+			"status": "ok",
+		}); err != nil {
+			log.Warnw("failed to write health response", "error", err)
+		}
 	})
 
 	return r
