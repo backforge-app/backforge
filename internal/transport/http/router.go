@@ -1,4 +1,6 @@
-// Package http implements the main HTTP router for the Backforge API.
+// Package http provides the HTTP transport layer for the Backforge API.
+// It contains the router, middleware, handlers, and HTTP server lifecycle
+// management responsible for serving the API over HTTP.
 package http
 
 import (
