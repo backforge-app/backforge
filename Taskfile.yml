@@ -1,0 +1,92 @@
+version: "3"
+
+env:
+  APP_NAME: backforge
+  COMPOSE: docker compose
+  GO: go
+
+tasks:
+  help:
+    desc: Show all available tasks
+    cmds:
+      - task --list
+
+  # Docker Compose tasks
+  up:
+    desc: Start all services (detached)
+    cmds:
+      - "{{.COMPOSE}} up -d"
+
+  up-build:
+    desc: Start all services WITH build
+    cmds:
+      - "{{.COMPOSE}} up -d --build"
+
+  down:
+    desc: Stop all services and remove volumes
+    cmds:
+      - "{{.COMPOSE}} down -v"
+
+  ps:
+    desc: Show running containers
+    cmds:
+      - "{{.COMPOSE}} ps"
+
+  logs:
+    desc: Follow container logs
+    cmds:
+      - "{{.COMPOSE}} logs -f --tail=200"
+
+  restart:
+    desc: Restart all services
+    cmds:
+      - "{{.COMPOSE}} restart"
+
+  # Migrations via migrator
+  migrate-up:
+    desc: Run goose migrations (up)
+    cmds:
+      - "{{.COMPOSE}} run --rm migrator up"
+
+  migrate-down:
+    desc: Rollback last migration (down)
+    cmds:
+      - "{{.COMPOSE}} run --rm migrator down"
+
+  # Go tasks
+  tidy:
+    desc: Run 'go mod tidy'
+    cmds:
+      - "{{.GO}} mod tidy"
+
+  fmt:
+    desc: Run 'gofmt' on source code
+    cmds:
+      - gofmt -w .
+
+  test:
+    desc: Run all Go tests
+    cmds:
+      - "{{.GO}} test ./..."
+
+  build:
+    desc: Build server binary locally
+    cmds:
+      - mkdir -p bin
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 {{.GO}} build -o bin/server ./cmd/server
+
+  # Linting
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  lint-fix:
+    desc: Run golangci-lint with fix
+    cmds:
+      - golangci-lint run --fix ./...
+
+  fmt-ci:
+    desc: Run golangci-lint fmt
+    cmds:
+      - golangci-lint fmt ./...
