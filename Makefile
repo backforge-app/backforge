@@ -88,11 +88,11 @@ fmt:
 
 .PHONY: test
 test:
-	$(GO) test ./...
+	$(GO) test -v ./...
 
 .PHONY: test-integration
 test-integration:
-	$(GO) test -v -tags=integration ./tests/integration...
+	$(GO) test -v -tags=integration ./test/integration...
 
 .PHONY: build
 build:

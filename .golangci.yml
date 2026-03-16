@@ -48,6 +48,7 @@ linters:
   exclusions:
     paths:
       - "api/swagger/*"
+      - "test/integration/*"
 
 formatters:
   enable:
