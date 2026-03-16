@@ -25,21 +25,80 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
+// MarkKnown godoc
+// @Summary Mark question as known
+// @Description Mark a question as known for the authenticated user
+// @Tags Progress
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param progress body markRequest true "Progress payload"
+// @Success 200
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 404 {object} render.Error "Progress not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /progress/known [post]
+//
 // MarkKnown handles POST /progress/known requests.
 func (h *Handler) MarkKnown(w http.ResponseWriter, r *http.Request) {
 	h.processMarkAction(w, r, h.service.MarkKnown, "mark known")
 }
 
+// MarkLearned godoc
+// @Summary Mark question as learned
+// @Description Mark a question as learned for the authenticated user
+// @Tags Progress
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param progress body markRequest true "Progress payload"
+// @Success 200
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 404 {object} render.Error "Progress not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /progress/learned [post]
+//
 // MarkLearned handles POST /progress/learned requests.
 func (h *Handler) MarkLearned(w http.ResponseWriter, r *http.Request) {
 	h.processMarkAction(w, r, h.service.MarkLearned, "mark learned")
 }
 
+// MarkSkipped godoc
+// @Summary Mark question as skipped
+// @Description Mark a question as skipped for the authenticated user
+// @Tags Progress
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param progress body markRequest true "Progress payload"
+// @Success 200
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 404 {object} render.Error "Progress not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /progress/skipped [post]
+//
 // MarkSkipped handles POST /progress/skipped requests.
 func (h *Handler) MarkSkipped(w http.ResponseWriter, r *http.Request) {
 	h.processMarkAction(w, r, h.service.MarkSkipped, "mark skipped")
 }
 
+// GetTopicProgress godoc
+// @Summary Get topic progress
+// @Description Get aggregated progress for a topic for the authenticated user
+// @Tags Progress
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Topic ID"
+// @Success 200 {object} aggregateResponse
+// @Failure 400 {object} render.Error "Invalid topic ID"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 404 {object} render.Error "Progress not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /progress/topics/{id} [get]
+//
 // GetTopicProgress handles GET /progress/topics/{id} requests.
 // It retrieves the aggregated progress for a specific topic for the authenticated user.
 func (h *Handler) GetTopicProgress(w http.ResponseWriter, r *http.Request) {
@@ -80,6 +139,20 @@ func (h *Handler) GetTopicProgress(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetQuestionProgress godoc
+// @Summary Get question progress
+// @Description Get progress of a specific question for the authenticated user
+// @Tags Progress
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Question ID"
+// @Success 200 {object} domain.UserQuestionProgress
+// @Failure 400 {object} render.Error "Invalid question ID"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 404 {object} render.Error "Progress not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /progress/questions/{id} [get]
+//
 // GetQuestionProgress handles GET /progress/questions/{id} requests.
 // It retrieves the progress of a specific question for the authenticated user.
 func (h *Handler) GetQuestionProgress(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +193,20 @@ func (h *Handler) GetQuestionProgress(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ResetTopic godoc
+// @Summary Reset topic progress
+// @Description Reset all progress data for a topic for the authenticated user
+// @Tags Progress
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Topic ID"
+// @Success 200
+// @Failure 400 {object} render.Error "Invalid topic ID"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 404 {object} render.Error "Progress not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /progress/topics/{id} [delete]
+//
 // ResetTopic handles DELETE /progress/topics/{id} requests.
 // It resets all progress data for the specified topic for the authenticated user.
 func (h *Handler) ResetTopic(w http.ResponseWriter, r *http.Request) {

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/backforge-app/backforge/internal/domain"
@@ -41,6 +40,19 @@ func levelFromString(s string) (domain.QuestionLevel, bool) {
 	}
 }
 
+// Create godoc
+// @Summary Create question
+// @Description Create a new question
+// @Tags Questions
+// @Accept json
+// @Produce json
+// @Param question body createRequest true "Question payload"
+// @Success 200 {object} createResponse
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 409 {object} render.Error "Question already exists"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /admin/questions [post]
+//
 // Create handles POST /questions requests.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -83,6 +95,21 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Update godoc
+// @Summary Update question
+// @Description Update an existing question
+// @Tags Questions
+// @Accept json
+// @Produce json
+// @Param id path string true "Question ID"
+// @Param question body updateRequest true "Question update payload"
+// @Success 200
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 404 {object} render.Error "Question not found"
+// @Failure 409 {object} render.Error "Question already exists"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /admin/questions/{id} [put]
+//
 // Update handles PUT /questions/{id} requests.
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -139,9 +166,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetByID godoc
+// @Summary Get question by ID
+// @Description Returns full question including content (admin endpoint)
+// @Tags Questions
+// @Produce json
+// @Param id path string true "Question ID"
+// @Success 200 {object} questionResponse
+// @Failure 400 {object} render.Error "Invalid question ID"
+// @Failure 404 {object} render.Error "Question not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /admin/questions/{id} [get]
+//
 // GetByID handles GET /admin/questions/{id} requests.
-// It returns the full question including its content.
-// This endpoint is intended for admin use.
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -173,13 +210,24 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if sendErr := render.OK(w, toResponse(q)); sendErr != nil {
+	if sendErr := render.OK(w, toQuestionResponse(q)); sendErr != nil {
 		h.log.With(zap.Error(sendErr)).Warn("failed to send get question response")
 	}
 }
 
+// GetBySlug godoc
+// @Summary Get question by slug
+// @Description Retrieve a question using its slug
+// @Tags Questions
+// @Produce json
+// @Param slug path string true "Question slug"
+// @Success 200 {object} questionResponse
+// @Failure 400 {object} render.Error "Invalid slug"
+// @Failure 404 {object} render.Error "Question not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /questions/{slug} [get]
+//
 // GetBySlug handles GET /questions/{slug} requests.
-// It retrieves a question by its slug.
 func (h *Handler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -210,13 +258,27 @@ func (h *Handler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if sendErr := render.OK(w, toResponse(q)); sendErr != nil {
+	if sendErr := render.OK(w, toQuestionResponse(q)); sendErr != nil {
 		h.log.With(zap.Error(sendErr)).Warn("failed to send get question response")
 	}
 }
 
+// ListCards godoc
+// @Summary List question cards
+// @Description Returns paginated list of question cards with filters
+// @Tags Questions
+// @Produce json
+// @Param limit query int false "Limit" default(20)
+// @Param offset query int false "Offset" default(0)
+// @Param search query string false "Search query"
+// @Param level query string false "Question level (beginner, medium, advanced)"
+// @Param tags query string false "Comma separated tag slugs"
+// @Success 200 {array} listCardResponse
+// @Failure 400 {object} render.Error "Invalid query parameters"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /questions [get]
+//
 // ListCards handles GET /questions.
-// Returns a list of questions with filtering and pagination via query params.
 func (h *Handler) ListCards(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -284,8 +346,18 @@ func (h *Handler) ListCards(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListByTopic godoc
+// @Summary List questions by topic
+// @Description Returns all questions for a specific topic
+// @Tags Questions
+// @Produce json
+// @Param id path string true "Topic ID"
+// @Success 200 {array} questionResponse
+// @Failure 400 {object} render.Error "Invalid topic ID"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /topics/{id}/questions [get]
+//
 // ListByTopic handles GET /topics/{id}/questions.
-// Returns all questions on the topic.
 func (h *Handler) ListByTopic(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -309,32 +381,11 @@ func (h *Handler) ListByTopic(w http.ResponseWriter, r *http.Request) {
 
 	resp := make([]questionResponse, len(questions))
 	for i, q := range questions {
-		resp[i] = toResponse(q)
+		resp[i] = toQuestionResponse(q)
 	}
 
 	if sendErr := render.OK(w, resp); sendErr != nil {
 		h.log.With(zap.Error(sendErr)).Warn("failed to send list questions response")
-	}
-}
-
-// toResponse converts a domain.Question to questionResponse DTO.
-func toResponse(q *domain.Question) questionResponse {
-	tagIDs := make([]uuid.UUID, len(q.Tags))
-	for i, t := range q.Tags {
-		tagIDs[i] = t.ID
-	}
-
-	return questionResponse{
-		ID:        q.ID,
-		Title:     q.Title,
-		Slug:      q.Slug,
-		Content:   q.Content,
-		Level:     q.Level.String(),
-		TopicID:   q.TopicID,
-		IsFree:    q.IsFree,
-		TagIDs:    tagIDs,
-		CreatedBy: q.CreatedBy,
-		UpdatedBy: q.UpdatedBy,
 	}
 }
 

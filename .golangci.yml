@@ -45,6 +45,9 @@ linters:
           arguments:
             - allow-regex: "^[a-z][a-z0-9]*$"
               deny-regex: '^v\d+$'
+  exclusions:
+    paths:
+      - "api/swagger/*"
 
 formatters:
   enable:

@@ -7,8 +7,8 @@ import (
 	"github.com/backforge-app/backforge/internal/domain"
 )
 
-// OverallProgressResponse represents the JSON payload for aggregated progress statistics.
-type OverallProgressResponse struct {
+// overallProgressResponse represents the JSON payload for aggregated progress statistics.
+type overallProgressResponse struct {
 	Total   int `json:"total"`
 	Known   int `json:"known"`
 	Learned int `json:"learned"`
@@ -16,21 +16,21 @@ type OverallProgressResponse struct {
 	New     int `json:"new"`
 }
 
-// TopicProgressPercentResponse represents the JSON payload for topic completion percentages.
-type TopicProgressPercentResponse struct {
+// topicProgressPercentResponse represents the JSON payload for topic completion percentages.
+type topicProgressPercentResponse struct {
 	TopicID   uuid.UUID `json:"topic_id"`
 	Completed int       `json:"completed"`
 	Total     int       `json:"total"`
 	Percent   float64   `json:"percent"`
 }
 
-// toOverallProgressResponse converts a domain.OverallProgress to OverallProgressResponse DTO.
-func toOverallProgressResponse(p *domain.OverallProgress) OverallProgressResponse {
+// toOverallProgressResponse converts a domain.OverallProgress to overallProgressResponse DTO.
+func toOverallProgressResponse(p *domain.OverallProgress) overallProgressResponse {
 	if p == nil {
-		return OverallProgressResponse{}
+		return overallProgressResponse{}
 	}
 
-	return OverallProgressResponse{
+	return overallProgressResponse{
 		Total:   p.Total,
 		Known:   p.Known,
 		Learned: p.Learned,
@@ -39,13 +39,13 @@ func toOverallProgressResponse(p *domain.OverallProgress) OverallProgressRespons
 	}
 }
 
-// toTopicProgressPercentResponse converts a domain.TopicProgressPercent to TopicProgressPercentResponse DTO.
-func toTopicProgressPercentResponse(p *domain.TopicProgressPercent) TopicProgressPercentResponse {
+// toTopicProgressPercentResponse converts a domain.TopicProgressPercent to topicProgressPercentResponse DTO.
+func toTopicProgressPercentResponse(p *domain.TopicProgressPercent) topicProgressPercentResponse {
 	if p == nil {
-		return TopicProgressPercentResponse{}
+		return topicProgressPercentResponse{}
 	}
 
-	return TopicProgressPercentResponse{
+	return topicProgressPercentResponse{
 		TopicID:   p.TopicID,
 		Completed: p.Completed,
 		Total:     p.Total,

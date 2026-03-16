@@ -23,6 +23,19 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
+// Create godoc
+// @Summary Create tag
+// @Description Create a new tag
+// @Tags Tags
+// @Accept json
+// @Produce json
+// @Param tag body createRequest true "Tag payload"
+// @Success 200 {object} createResponse
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 409 {object} render.Error "Tag already exists"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /admin/tags [post]
+//
 // Create handles POST /tags requests.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -44,6 +57,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetByID godoc
+// @Summary Get tag by ID
+// @Description Retrieve a tag by its ID
+// @Tags Tags
+// @Produce json
+// @Param id path string true "Tag ID"
+// @Success 200 {object} tagResponse
+// @Failure 400 {object} render.Error "Invalid tag ID"
+// @Failure 404 {object} render.Error "Tag not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /tags/{id} [get]
+//
 // GetByID handles GET /tags/{id} requests.
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -68,6 +93,15 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// List godoc
+// @Summary List tags
+// @Description Returns all tags
+// @Tags Tags
+// @Produce json
+// @Success 200 {array} tagResponse
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /tags [get]
+//
 // List handles GET /tags requests.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -88,6 +122,18 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Delete godoc
+// @Summary Delete tag
+// @Description Delete a tag by ID
+// @Tags Tags
+// @Produce json
+// @Param id path string true "Tag ID"
+// @Success 200
+// @Failure 400 {object} render.Error "Invalid tag ID"
+// @Failure 404 {object} render.Error "Tag not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /admin/tags/{id} [delete]
+//
 // Delete handles DELETE /tags/{id} requests.
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

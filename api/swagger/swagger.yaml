@@ -1,0 +1,1233 @@
+definitions:
+  analytics.overallProgressResponse:
+    properties:
+      known:
+        type: integer
+      learned:
+        type: integer
+      new:
+        type: integer
+      skipped:
+        type: integer
+      total:
+        type: integer
+    type: object
+  analytics.topicProgressPercentResponse:
+    properties:
+      completed:
+        type: integer
+      percent:
+        type: number
+      topic_id:
+        type: string
+      total:
+        type: integer
+    type: object
+  auth.loginRequest:
+    properties:
+      auth_date:
+        description: Authorization timestamp
+        type: integer
+      first_name:
+        description: First name
+        type: string
+      hash:
+        description: Telegram login hash
+        type: string
+      id:
+        description: Telegram user ID
+        type: integer
+      last_name:
+        description: Last name (optional)
+        type: string
+      photo_url:
+        description: Avatar URL (optional)
+        type: string
+      username:
+        description: Telegram username (optional)
+        type: string
+    required:
+    - auth_date
+    - first_name
+    - hash
+    - id
+    type: object
+  auth.loginResponse:
+    properties:
+      access_token:
+        description: JWT token
+        type: string
+      refresh_token:
+        description: Refresh token
+        type: string
+    type: object
+  auth.refreshRequest:
+    properties:
+      refresh_token:
+        description: Existing refresh token
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.refreshResponse:
+    properties:
+      access_token:
+        description: New JWT token
+        type: string
+      refresh_token:
+        description: New refresh token
+        type: string
+    type: object
+  domain.ProgressStatus:
+    enum:
+    - new
+    - skipped
+    - known
+    - learned
+    type: string
+    x-enum-comments:
+      ProgressStatusKnown: User marked the question as known
+      ProgressStatusLearned: User marked the question as learned
+      ProgressStatusNew: User has not seen the question
+      ProgressStatusSkipped: User skipped the question
+    x-enum-descriptions:
+    - User has not seen the question
+    - User skipped the question
+    - User marked the question as known
+    - User marked the question as learned
+    x-enum-varnames:
+    - ProgressStatusNew
+    - ProgressStatusSkipped
+    - ProgressStatusKnown
+    - ProgressStatusLearned
+  domain.UserQuestionProgress:
+    properties:
+      id:
+        type: string
+      questionID:
+        type: string
+      status:
+        $ref: '#/definitions/domain.ProgressStatus'
+      updatedAt:
+        type: string
+      userID:
+        type: string
+    type: object
+  progress.aggregateResponse:
+    properties:
+      current_position:
+        type: integer
+      known:
+        type: integer
+      learned:
+        type: integer
+      new:
+        type: integer
+      skipped:
+        type: integer
+    type: object
+  progress.markRequest:
+    properties:
+      question_id:
+        type: string
+      topic_id:
+        type: string
+    required:
+    - question_id
+    - topic_id
+    type: object
+  question.createRequest:
+    properties:
+      content:
+        additionalProperties: true
+        description: Question content (structured)
+        type: object
+      created_by:
+        description: Creator user ID
+        type: string
+      is_free:
+        description: Access flag
+        type: boolean
+      level:
+        description: Difficulty level
+        type: string
+      slug:
+        description: Unique slug
+        type: string
+      tag_ids:
+        description: Tags
+        items:
+          type: string
+        type: array
+      title:
+        description: Question title
+        type: string
+      topic_id:
+        description: Optional topic
+        type: string
+    required:
+    - content
+    - level
+    - slug
+    - title
+    type: object
+  question.createResponse:
+    properties:
+      id:
+        description: New question ID
+        type: string
+    type: object
+  question.listCardResponse:
+    properties:
+      id:
+        type: string
+      is_free:
+        type: boolean
+      is_new:
+        type: boolean
+      level:
+        type: string
+      slug:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  question.questionResponse:
+    properties:
+      content:
+        additionalProperties: true
+        type: object
+      created_by:
+        type: string
+      id:
+        type: string
+      is_free:
+        type: boolean
+      level:
+        type: string
+      slug:
+        type: string
+      tag_ids:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      topic_id:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  question.updateRequest:
+    properties:
+      content:
+        additionalProperties: true
+        description: Optional new content
+        type: object
+      is_free:
+        description: Optional access flag
+        type: boolean
+      level:
+        description: Optional new level
+        type: string
+      slug:
+        description: Optional new slug
+        type: string
+      tag_ids:
+        description: Optional new tags
+        items:
+          type: string
+        type: array
+      title:
+        description: Optional new title
+        type: string
+      topic_id:
+        description: Optional topic
+        type: string
+      updated_by:
+        description: Updater user ID
+        type: string
+    type: object
+  render.Error:
+    properties:
+      details: {}
+      error:
+        type: string
+    type: object
+  tag.createRequest:
+    properties:
+      created_by:
+        description: Creator user ID
+        type: string
+      name:
+        description: Tag name
+        type: string
+    required:
+    - name
+    type: object
+  tag.createResponse:
+    properties:
+      id:
+        description: New tag ID
+        type: string
+    type: object
+  tag.tagResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  topic.createRequest:
+    properties:
+      created_by:
+        description: Creator user ID
+        type: string
+      description:
+        description: Optional description
+        type: string
+      slug:
+        description: Unique slug for the topic
+        type: string
+      title:
+        description: Topic title
+        type: string
+    required:
+    - slug
+    - title
+    type: object
+  topic.createResponse:
+    properties:
+      id:
+        description: New topic ID
+        type: string
+    type: object
+  topic.topicResponse:
+    properties:
+      created_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      slug:
+        type: string
+      title:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  topic.topicRowResponse:
+    properties:
+      id:
+        type: string
+      question_count:
+        type: integer
+      slug:
+        type: string
+      title:
+        type: string
+    type: object
+  topic.updateRequest:
+    properties:
+      description:
+        description: Optional new description
+        type: string
+      slug:
+        description: Optional new slug
+        type: string
+      title:
+        description: Optional new title
+        type: string
+      updated_by:
+        description: Updater user ID
+        type: string
+    type: object
+  user.userResponse:
+    properties:
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      photo_url:
+        type: string
+      role:
+        type: string
+      telegram_id:
+        type: integer
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /admin/questions:
+    post:
+      consumes:
+      - application/json
+      description: Create a new question
+      parameters:
+      - description: Question payload
+        in: body
+        name: question
+        required: true
+        schema:
+          $ref: '#/definitions/question.createRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/question.createResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "409":
+          description: Question already exists
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Create question
+      tags:
+      - Questions
+  /admin/questions/{id}:
+    get:
+      description: Returns full question including content (admin endpoint)
+      parameters:
+      - description: Question ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/question.questionResponse'
+        "400":
+          description: Invalid question ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Question not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Get question by ID
+      tags:
+      - Questions
+    put:
+      consumes:
+      - application/json
+      description: Update an existing question
+      parameters:
+      - description: Question ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Question update payload
+        in: body
+        name: question
+        required: true
+        schema:
+          $ref: '#/definitions/question.updateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Question not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "409":
+          description: Question already exists
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Update question
+      tags:
+      - Questions
+  /admin/tags:
+    post:
+      consumes:
+      - application/json
+      description: Create a new tag
+      parameters:
+      - description: Tag payload
+        in: body
+        name: tag
+        required: true
+        schema:
+          $ref: '#/definitions/tag.createRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tag.createResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "409":
+          description: Tag already exists
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Create tag
+      tags:
+      - Tags
+  /admin/tags/{id}:
+    delete:
+      description: Delete a tag by ID
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid tag ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Tag not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Delete tag
+      tags:
+      - Tags
+  /admin/topics:
+    post:
+      consumes:
+      - application/json
+      description: Create a new topic
+      parameters:
+      - description: Topic payload
+        in: body
+        name: topic
+        required: true
+        schema:
+          $ref: '#/definitions/topic.createRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/topic.createResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "409":
+          description: Topic already exists
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Create topic
+      tags:
+      - Topics
+  /admin/topics/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update an existing topic
+      parameters:
+      - description: Topic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Topic update payload
+        in: body
+        name: topic
+        required: true
+        schema:
+          $ref: '#/definitions/topic.updateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Topic not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "409":
+          description: Topic already exists
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Update topic
+      tags:
+      - Topics
+  /analytics/overall:
+    get:
+      description: Returns aggregated statistics for the authenticated user's dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/analytics.overallProgressResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Get overall progress
+      tags:
+      - Analytics
+  /analytics/reset:
+    delete:
+      description: Reset all question and topic progress for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Reset all progress
+      tags:
+      - Analytics
+  /analytics/topics:
+    get:
+      description: Returns completion percentages for each topic for the authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/analytics.topicProgressPercentResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Get topic progress percentages
+      tags:
+      - Analytics
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a refresh token for a new access token
+      parameters:
+      - description: Refresh token payload
+        in: body
+        name: refresh
+        required: true
+        schema:
+          $ref: '#/definitions/auth.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New access and refresh tokens
+          schema:
+            $ref: '#/definitions/auth.refreshResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Refresh access token
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login endpoint for Telegram auth
+      parameters:
+      - description: Login payload
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/auth.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.loginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Login using Telegram
+      tags:
+      - Auth
+  /progress/known:
+    post:
+      consumes:
+      - application/json
+      description: Mark a question as known for the authenticated user
+      parameters:
+      - description: Progress payload
+        in: body
+        name: progress
+        required: true
+        schema:
+          $ref: '#/definitions/progress.markRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Progress not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Mark question as known
+      tags:
+      - Progress
+  /progress/learned:
+    post:
+      consumes:
+      - application/json
+      description: Mark a question as learned for the authenticated user
+      parameters:
+      - description: Progress payload
+        in: body
+        name: progress
+        required: true
+        schema:
+          $ref: '#/definitions/progress.markRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Progress not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Mark question as learned
+      tags:
+      - Progress
+  /progress/questions/{id}:
+    get:
+      description: Get progress of a specific question for the authenticated user
+      parameters:
+      - description: Question ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserQuestionProgress'
+        "400":
+          description: Invalid question ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Progress not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Get question progress
+      tags:
+      - Progress
+  /progress/skipped:
+    post:
+      consumes:
+      - application/json
+      description: Mark a question as skipped for the authenticated user
+      parameters:
+      - description: Progress payload
+        in: body
+        name: progress
+        required: true
+        schema:
+          $ref: '#/definitions/progress.markRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Progress not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Mark question as skipped
+      tags:
+      - Progress
+  /progress/topics/{id}:
+    delete:
+      description: Reset all progress data for a topic for the authenticated user
+      parameters:
+      - description: Topic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid topic ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Progress not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Reset topic progress
+      tags:
+      - Progress
+    get:
+      description: Get aggregated progress for a topic for the authenticated user
+      parameters:
+      - description: Topic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/progress.aggregateResponse'
+        "400":
+          description: Invalid topic ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Progress not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Get topic progress
+      tags:
+      - Progress
+  /questions:
+    get:
+      description: Returns paginated list of question cards with filters
+      parameters:
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      - description: Question level (beginner, medium, advanced)
+        in: query
+        name: level
+        type: string
+      - description: Comma separated tag slugs
+        in: query
+        name: tags
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/question.listCardResponse'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: List question cards
+      tags:
+      - Questions
+  /questions/{slug}:
+    get:
+      description: Retrieve a question using its slug
+      parameters:
+      - description: Question slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/question.questionResponse'
+        "400":
+          description: Invalid slug
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Question not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Get question by slug
+      tags:
+      - Questions
+  /tags:
+    get:
+      description: Returns all tags
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/tag.tagResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: List tags
+      tags:
+      - Tags
+  /tags/{id}:
+    get:
+      description: Retrieve a tag by its ID
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tag.tagResponse'
+        "400":
+          description: Invalid tag ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Tag not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Get tag by ID
+      tags:
+      - Tags
+  /topics:
+    get:
+      description: Returns topics formatted as rows with question counts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/topic.topicRowResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: List topics
+      tags:
+      - Topics
+  /topics/{id}:
+    get:
+      description: Retrieve a topic by its ID
+      parameters:
+      - description: Topic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/topic.topicResponse'
+        "400":
+          description: Invalid topic ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Topic not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Get topic by ID
+      tags:
+      - Topics
+  /topics/{id}/questions:
+    get:
+      description: Returns all questions for a specific topic
+      parameters:
+      - description: Topic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/question.questionResponse'
+            type: array
+        "400":
+          description: Invalid topic ID
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: List questions by topic
+      tags:
+      - Questions
+  /topics/slug/{slug}:
+    get:
+      description: Retrieve a topic by its slug
+      parameters:
+      - description: Topic slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/topic.topicResponse'
+        "400":
+          description: Invalid slug
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: Topic not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Get topic by slug
+      tags:
+      - Topics
+  /users/me:
+    get:
+      description: Returns the authenticated user's profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.userResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Users
+swagger: "2.0"

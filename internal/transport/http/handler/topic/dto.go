@@ -1,7 +1,11 @@
 // Package topic provides HTTP request and response DTOs for topic handlers.
 package topic
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+
+	"github.com/backforge-app/backforge/internal/domain"
+)
 
 // createRequest represents the JSON payload for creating a new topic.
 type createRequest struct {
@@ -40,4 +44,22 @@ type topicRowResponse struct {
 	Title         string    `json:"title"`
 	Slug          string    `json:"slug"`
 	QuestionCount int       `json:"question_count"`
+}
+
+// toTopicResponse converts a domain.Topic to a topicResponse DTO.
+func toTopicResponse(t *domain.Topic) topicResponse {
+	var desc *string
+	if t.Description != "" {
+		d := t.Description
+		desc = &d
+	}
+
+	return topicResponse{
+		ID:          t.ID,
+		Title:       t.Title,
+		Slug:        t.Slug,
+		Description: desc,
+		CreatedBy:   t.CreatedBy,
+		UpdatedBy:   t.UpdatedBy,
+	}
 }

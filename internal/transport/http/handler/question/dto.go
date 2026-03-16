@@ -1,7 +1,11 @@
 // Package question provides HTTP request and response DTOs for question handlers.
 package question
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+
+	"github.com/backforge-app/backforge/internal/domain"
+)
 
 // createRequest represents the JSON payload for creating a new question.
 type createRequest struct {
@@ -55,4 +59,25 @@ type listCardResponse struct {
 	Tags   []string  `json:"tags"`
 	IsNew  bool      `json:"is_new"`
 	IsFree bool      `json:"is_free"`
+}
+
+// toQuestionResponse converts a domain.Question to questionResponse DTO.
+func toQuestionResponse(q *domain.Question) questionResponse {
+	tagIDs := make([]uuid.UUID, len(q.Tags))
+	for i, t := range q.Tags {
+		tagIDs[i] = t.ID
+	}
+
+	return questionResponse{
+		ID:        q.ID,
+		Title:     q.Title,
+		Slug:      q.Slug,
+		Content:   q.Content,
+		Level:     q.Level.String(),
+		TopicID:   q.TopicID,
+		IsFree:    q.IsFree,
+		TagIDs:    tagIDs,
+		CreatedBy: q.CreatedBy,
+		UpdatedBy: q.UpdatedBy,
+	}
 }
