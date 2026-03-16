@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/cors"
 	"go.uber.org/zap"
 
+	"github.com/backforge-app/backforge/internal/config"
 	"github.com/backforge-app/backforge/internal/transport/http/handler/analytics"
 	"github.com/backforge-app/backforge/internal/transport/http/handler/auth"
 	"github.com/backforge-app/backforge/internal/transport/http/handler/progress"
@@ -36,6 +37,7 @@ type Handlers struct {
 
 // NewRouter creates a production-ready HTTP router.
 func NewRouter(
+	cfg *config.Config,
 	log *zap.SugaredLogger,
 	handlers Handlers,
 	userSvc mw.UserRoleChecker,
@@ -79,7 +81,7 @@ func NewRouter(
 
 		// --- Protected Routes (Auth Required) ---
 		protected := chi.NewRouter()
-		protected.Use(mw.Auth(log))
+		protected.Use(mw.Auth(cfg.Auth.Secret, log))
 
 		// User profile
 		protected.Route("/users", func(r chi.Router) {
