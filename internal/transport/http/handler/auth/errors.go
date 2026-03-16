@@ -9,4 +9,7 @@ var (
 
 	// ErrInternalServer indicates an internal server error.
 	ErrInternalServer = errors.New("internal server error")
+
+	// ErrInvalidRequest indicates an bad request error.
+	ErrInvalidRequest = errors.New("invalid request")
 )

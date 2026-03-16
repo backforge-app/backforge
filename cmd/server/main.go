@@ -14,14 +14,15 @@ import (
 )
 
 func main() {
-	// Create a context that is cancelled on SIGINT or SIGTERM signals.
+	// Create a context that is canceled on SIGINT or SIGTERM signals.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	// Initialize the application with all dependencies.
 	a, err := app.New(ctx)
 	if err != nil {
-		log.Fatalf("failed to create app: %v", err)
+		log.Printf("failed to create app: %v", err)
+		return
 	}
 
 	// Run the application (HTTP server) and block until it exits.

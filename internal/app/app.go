@@ -136,7 +136,7 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	// Setup HTTP router.
-	router := transporthttp.NewRouter(log, handlers, userSvc)
+	router := transporthttp.NewRouter(cfg, log, handlers, userSvc)
 
 	// Create HTTP server.
 	server := transporthttp.NewServer(cfg, log, router)
