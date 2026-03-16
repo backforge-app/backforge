@@ -23,6 +23,19 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
+// Login godoc
+// @Summary Login using Telegram
+// @Description Login endpoint for Telegram auth
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param login body loginRequest true "Login payload"
+// @Success 200 {object} loginResponse
+// @Failure 400 {object} render.Error "Bad Request"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 500 {object} render.Error "Internal Server Error"
+// @Router /auth/login [post]
+//
 // Login handles POST /login requests using Telegram login.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -79,6 +92,18 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Refresh godoc
+// @Summary Refresh access token
+// @Description Exchange a refresh token for a new access token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param refresh body refreshRequest true "Refresh token payload"
+// @Success 200 {object} refreshResponse "New access and refresh tokens"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /api/v1/auth/refresh [post]
+//
 // Refresh handles POST /refresh requests.
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

@@ -26,6 +26,18 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	}
 }
 
+// GetProfile godoc
+// @Summary Get current user profile
+// @Description Returns the authenticated user's profile
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} userResponse
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 404 {object} render.Error "User not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /users/me [get]
+//
 // GetProfile handles GET /users/me requests.
 // It returns the authenticated user's profile based on the ID in the context.
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {

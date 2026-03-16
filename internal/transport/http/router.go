@@ -10,7 +10,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	httpswagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
+
+	_ "github.com/backforge-app/backforge/api/swagger"
 
 	"github.com/backforge-app/backforge/internal/config"
 	"github.com/backforge-app/backforge/internal/transport/http/handler/analytics"
@@ -44,7 +47,7 @@ func NewRouter(
 ) http.Handler {
 	r := chi.NewRouter()
 
-	// --- Global middleware (RequestID, Logger, Recovery, etc.) ---
+	// Global middleware (RequestID, Logger, Recovery, etc.).
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(mw.Logger(log))
@@ -60,13 +63,13 @@ func NewRouter(
 	}))
 
 	r.Route("/api/v1", func(r chi.Router) {
-		// --- Auth Routes ---
+		// Auth Routes.
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/login", handlers.Auth.Login)
 			r.Post("/refresh", handlers.Auth.Refresh)
 		})
 
-		// --- Public Discovery Routes (No Auth Required) ---
+		// Public Discovery Routes (No Auth Required).
 		// These allow unauthorized users to browse the catalog.
 		r.Route("/questions", func(r chi.Router) {
 			r.Get("/", handlers.Question.ListCards)
@@ -79,16 +82,16 @@ func NewRouter(
 			r.Get("/{id}/questions", handlers.Question.ListByTopic)
 		})
 
-		// --- Protected Routes (Auth Required) ---
+		// Protected Routes (Auth Required).
 		protected := chi.NewRouter()
 		protected.Use(mw.Auth(cfg.Auth.Secret, log))
 
-		// User profile
+		// User profile.
 		protected.Route("/users", func(r chi.Router) {
 			r.Get("/me", handlers.User.GetProfile)
 		})
 
-		// Question & Topic exploration
+		// Question & Topic exploration.
 		protected.Route("/questions", func(r chi.Router) {
 			r.Get("/{id}", handlers.Question.GetByID)
 		})
@@ -99,7 +102,7 @@ func NewRouter(
 			r.Get("/", handlers.Tag.List)
 		})
 
-		// Progress tracking
+		// Progress tracking.
 		protected.Route("/progress", func(r chi.Router) {
 			r.Post("/known", handlers.Progress.MarkKnown)
 			r.Post("/learned", handlers.Progress.MarkLearned)
@@ -110,14 +113,14 @@ func NewRouter(
 			r.Get("/questions/{id}", handlers.Progress.GetQuestionProgress)
 		})
 
-		// Analytics & Dashboard
+		// Analytics & Dashboard.
 		protected.Route("/analytics", func(r chi.Router) {
 			r.Get("/overall", handlers.Analytics.GetOverallProgress)
 			r.Get("/topics", handlers.Analytics.GetProgressByTopicPercent)
 			r.Delete("/reset", handlers.Analytics.ResetAllProgress)
 		})
 
-		// --- Admin routes ---
+		// Admin routes.
 		protected.Route("/admin", func(r chi.Router) {
 			r.Use(mw.AdminOnly(log, userSvc))
 
@@ -139,7 +142,12 @@ func NewRouter(
 		r.Mount("/", protected)
 	})
 
-	// --- Health check ---
+	// Swagger UI.
+	r.Get("/swagger/*", httpswagger.Handler(
+		httpswagger.URL("/swagger/doc.json"),
+	))
+
+	// Health check.
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := render.JSON(w, http.StatusOK, map[string]string{
 			"status": "ok",

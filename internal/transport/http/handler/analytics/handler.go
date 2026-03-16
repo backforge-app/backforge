@@ -24,6 +24,17 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	}
 }
 
+// GetOverallProgress godoc
+// @Summary Get overall progress
+// @Description Returns aggregated statistics for the authenticated user's dashboard
+// @Tags Analytics
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} overallProgressResponse
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /analytics/overall [get]
+//
 // GetOverallProgress handles GET /analytics/overall requests.
 // It retrieves aggregated statistics for the authenticated user dashboard.
 func (h *Handler) GetOverallProgress(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +65,17 @@ func (h *Handler) GetOverallProgress(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetProgressByTopicPercent godoc
+// @Summary Get topic progress percentages
+// @Description Returns completion percentages for each topic for the authenticated user
+// @Tags Analytics
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} topicProgressPercentResponse
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /analytics/topics [get]
+//
 // GetProgressByTopicPercent handles GET /analytics/topics requests.
 // It returns completion percentages for each topic for the authenticated user.
 func (h *Handler) GetProgressByTopicPercent(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +100,7 @@ func (h *Handler) GetProgressByTopicPercent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	resp := make([]TopicProgressPercentResponse, len(topicProgress))
+	resp := make([]topicProgressPercentResponse, len(topicProgress))
 	for i, p := range topicProgress {
 		resp[i] = toTopicProgressPercentResponse(p)
 	}
@@ -88,6 +110,17 @@ func (h *Handler) GetProgressByTopicPercent(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// ResetAllProgress godoc
+// @Summary Reset all progress
+// @Description Reset all question and topic progress for the authenticated user
+// @Tags Analytics
+// @Produce json
+// @Security BearerAuth
+// @Success 200
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /analytics/reset [delete]
+//
 // ResetAllProgress handles DELETE /analytics/reset requests.
 // It resets all stored question and topic progress for the authenticated user.
 func (h *Handler) ResetAllProgress(w http.ResponseWriter, r *http.Request) {

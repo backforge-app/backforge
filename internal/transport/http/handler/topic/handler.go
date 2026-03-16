@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"github.com/backforge-app/backforge/internal/domain"
 	servicetopic "github.com/backforge-app/backforge/internal/service/topic"
 	"github.com/backforge-app/backforge/internal/transport/http/httputil"
 	"github.com/backforge-app/backforge/internal/transport/http/render"
@@ -25,6 +24,19 @@ func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
 	return &Handler{service: service, log: log}
 }
 
+// Create godoc
+// @Summary Create topic
+// @Description Create a new topic
+// @Tags Topics
+// @Accept json
+// @Produce json
+// @Param topic body createRequest true "Topic payload"
+// @Success 200 {object} createResponse
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 409 {object} render.Error "Topic already exists"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /admin/topics [post]
+//
 // Create handles POST /topics requests.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -58,6 +70,21 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Update godoc
+// @Summary Update topic
+// @Description Update an existing topic
+// @Tags Topics
+// @Accept json
+// @Produce json
+// @Param id path string true "Topic ID"
+// @Param topic body updateRequest true "Topic update payload"
+// @Success 200
+// @Failure 400 {object} render.Error "Invalid request data"
+// @Failure 404 {object} render.Error "Topic not found"
+// @Failure 409 {object} render.Error "Topic already exists"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /admin/topics/{id} [put]
+//
 // Update handles PUT /topics/{id} requests.
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -95,6 +122,18 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetByID godoc
+// @Summary Get topic by ID
+// @Description Retrieve a topic by its ID
+// @Tags Topics
+// @Produce json
+// @Param id path string true "Topic ID"
+// @Success 200 {object} topicResponse
+// @Failure 400 {object} render.Error "Invalid topic ID"
+// @Failure 404 {object} render.Error "Topic not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /topics/{id} [get]
+//
 // GetByID handles GET /topics/{id} requests.
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -131,6 +170,18 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetBySlug godoc
+// @Summary Get topic by slug
+// @Description Retrieve a topic by its slug
+// @Tags Topics
+// @Produce json
+// @Param slug path string true "Topic slug"
+// @Success 200 {object} topicResponse
+// @Failure 400 {object} render.Error "Invalid slug"
+// @Failure 404 {object} render.Error "Topic not found"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /topics/slug/{slug} [get]
+//
 // GetBySlug handles GET /topics/slug/{slug} requests.
 func (h *Handler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -167,8 +218,16 @@ func (h *Handler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListRows godoc
+// @Summary List topics
+// @Description Returns topics formatted as rows with question counts
+// @Tags Topics
+// @Produce json
+// @Success 200 {array} topicRowResponse
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /topics [get]
+//
 // ListRows handles GET /topics requests.
-// It retrieves a list of topics formatted as rows, including question counts.
 func (h *Handler) ListRows(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -193,24 +252,6 @@ func (h *Handler) ListRows(w http.ResponseWriter, r *http.Request) {
 
 	if sendErr := render.OK(w, resp); sendErr != nil {
 		h.log.With(zap.Error(sendErr)).Warn("failed to send list topics response")
-	}
-}
-
-// toTopicResponse converts a domain.Topic to a topicResponse DTO.
-func toTopicResponse(t *domain.Topic) topicResponse {
-	var desc *string
-	if t.Description != "" {
-		d := t.Description
-		desc = &d
-	}
-
-	return topicResponse{
-		ID:          t.ID,
-		Title:       t.Title,
-		Slug:        t.Slug,
-		Description: desc,
-		CreatedBy:   t.CreatedBy,
-		UpdatedBy:   t.UpdatedBy,
 	}
 }
 
