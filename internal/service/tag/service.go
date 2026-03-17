@@ -33,11 +33,7 @@ func (s *Service) Create(ctx context.Context, name string, createdBy *uuid.UUID)
 		return uuid.Nil, ErrTagInvalidData
 	}
 
-	t := &domain.Tag{
-		Name:      name,
-		CreatedBy: createdBy,
-		UpdatedBy: createdBy,
-	}
+	t := domain.NewTag(name, createdBy)
 
 	id, err := s.tagRepo.Create(ctx, t)
 	if err != nil {

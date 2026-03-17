@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/backforge-app/backforge/internal/app"
+	"github.com/backforge-app/backforge/internal/logger"
 )
 
 func main() {
@@ -24,6 +25,9 @@ func main() {
 		log.Printf("failed to create app: %v", err)
 		return
 	}
+
+	// Flush any buffered log entries before the application exits.
+	defer logger.Sync(a.Logger)
 
 	// Run the application (HTTP server) and block until it exits.
 	if err := a.Run(ctx); err != nil {
