@@ -19,12 +19,13 @@ var ErrMissingEnvVar = errors.New("missing required environment variable")
 type Config struct {
 	Env string `mapstructure:"env"` // the current environment (development, staging, production, etc.)
 
-	HTTP     HTTP     `mapstructure:"http"`
-	Telegram Telegram `mapstructure:"telegram"`
-	Auth     Auth     `mapstructure:"auth"`
-	Postgres Postgres `mapstructure:"postgres"`
-	Client   Client   `mapstructure:"client"`
-	Logging  Logging  `mapstructure:"logging"`
+	HTTP      HTTP      `mapstructure:"http"`
+	RateLimit RateLimit `mapstructure:"rate_limit"`
+	Telegram  Telegram  `mapstructure:"telegram"`
+	Auth      Auth      `mapstructure:"auth"`
+	Postgres  Postgres  `mapstructure:"postgres"`
+	Client    Client    `mapstructure:"client"`
+	Logging   Logging   `mapstructure:"logging"`
 }
 
 // HTTP contains settings for the HTTP server.
@@ -34,6 +35,18 @@ type HTTP struct {
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	IdleTimeout     time.Duration `mapstructure:"idle_timeout"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
+}
+
+type RateLimit struct {
+	Enabled         bool          `mapstructure:"enabled"`
+	CleanupInterval time.Duration `mapstructure:"cleanup_interval"`
+	Global          LimitConfig   `mapstructure:"global"`
+	Auth            LimitConfig   `mapstructure:"auth"`
+}
+
+type LimitConfig struct {
+	Limit float64 `mapstructure:"limit"`
+	Burst int     `mapstructure:"burst"`
 }
 
 // Telegram contains Telegram Bot related configuration.
@@ -119,6 +132,13 @@ func initViper() *viper.Viper {
 	v.SetDefault("http.write_timeout", "10s")
 	v.SetDefault("http.idle_timeout", "60s")
 	v.SetDefault("http.shutdown_timeout", "8s")
+
+	v.SetDefault("rate_limit.enabled", true)
+	v.SetDefault("rate_limit.cleanup_interval", "3m")
+	v.SetDefault("rate_limit.global.limit", 10.0)
+	v.SetDefault("rate_limit.global.burst", 20)
+	v.SetDefault("rate_limit.auth.limit", 1.0)
+	v.SetDefault("rate_limit.auth.burst", 5)
 
 	v.SetDefault("telegram.debug", false)
 	v.SetDefault("auth.access_token_ttl", "30m")

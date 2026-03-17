@@ -1,3 +1,5 @@
+// Package middleware provides HTTP middleware components for the Backforge API.
+// It includes utilities for logging, authentication, authorization, and rate limiting.
 package middleware
 
 import (

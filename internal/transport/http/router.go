@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/cors"
 	httpswagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 
 	_ "github.com/backforge-app/backforge/api/swagger"
 
@@ -53,6 +54,16 @@ func NewRouter(
 	r.Use(mw.Logger(log))
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(60 * time.Second))
+
+	if cfg.RateLimit.Enabled {
+		r.Use(mw.RateLimiter(
+			log,
+			rate.Limit(cfg.RateLimit.Global.Limit),
+			cfg.RateLimit.Global.Burst,
+			cfg.RateLimit.CleanupInterval,
+		))
+	}
+
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
@@ -65,6 +76,15 @@ func NewRouter(
 	r.Route("/api/v1", func(r chi.Router) {
 		// Auth Routes.
 		r.Route("/auth", func(r chi.Router) {
+			if cfg.RateLimit.Enabled {
+				r.Use(mw.RateLimiter(
+					log,
+					rate.Limit(cfg.RateLimit.Auth.Limit),
+					cfg.RateLimit.Auth.Burst,
+					cfg.RateLimit.CleanupInterval,
+				))
+			}
+
 			r.Post("/login", handlers.Auth.Login)
 			r.Post("/refresh", handlers.Auth.Refresh)
 		})
