@@ -35,9 +35,8 @@ func (r *Repository) Create(ctx context.Context, t *domain.Tag) (uuid.UUID, erro
 	const q = `
 		INSERT INTO tags (
 		    name, 
-		    created_by, 
-		    updated_by
-		) VALUES ($1, $2, $3)
+		    created_by
+		) VALUES ($1, $2)
 		RETURNING id
 	`
 
@@ -45,7 +44,6 @@ func (r *Repository) Create(ctx context.Context, t *domain.Tag) (uuid.UUID, erro
 	err := db.QueryRow(ctx, q,
 		t.Name,
 		t.CreatedBy,
-		t.UpdatedBy,
 	).Scan(&id)
 
 	if err != nil {
