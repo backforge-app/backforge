@@ -21,7 +21,6 @@ import (
 )
 
 // validate is the shared validator instance used across the render package.
-// It is initialized once using a package-level function expression to avoid using init().
 var validate = func() *validator.Validate {
 	v := validator.New()
 

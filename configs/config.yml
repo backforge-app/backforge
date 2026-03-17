@@ -7,6 +7,16 @@ http:
   idle_timeout: "60s"
   shutdown_timeout: "8s"
 
+rate_limit:
+  enabled: true
+  cleanup_interval: "3m"
+  global:
+    limit: 10.0
+    burst: 20
+  auth:
+    limit: 1.0
+    burst: 3
+
 telegram:
   debug: true
 
