@@ -102,6 +102,10 @@ func NewRouter(
 			r.Get("/{id}/questions", handlers.Question.ListByTopic)
 		})
 
+		r.Route("/tags", func(r chi.Router) {
+			r.Get("/", handlers.Tag.List)
+		})
+
 		// Protected Routes (Auth Required).
 		protected := chi.NewRouter()
 		protected.Use(mw.Auth(cfg.Auth.Secret, log))
@@ -117,9 +121,6 @@ func NewRouter(
 		})
 		protected.Route("/topics", func(r chi.Router) {
 			r.Get("/{id}", handlers.Topic.GetByID)
-		})
-		protected.Route("/tags", func(r chi.Router) {
-			r.Get("/", handlers.Tag.List)
 		})
 
 		// Progress tracking.
