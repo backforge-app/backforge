@@ -10,6 +10,7 @@ import (
 
 	auth "github.com/backforge-app/backforge/internal/service/auth"
 	gomock "github.com/golang/mock/gomock"
+	uuid "github.com/google/uuid"
 )
 
 // MockService is a mock of Service interface.
@@ -33,6 +34,22 @@ func NewMockService(ctrl *gomock.Controller) *MockService {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
+}
+
+// DevLogin mocks base method.
+func (m *MockService) DevLogin(arg0 context.Context, arg1 uuid.UUID) (string, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DevLogin", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// DevLogin indicates an expected call of DevLogin.
+func (mr *MockServiceMockRecorder) DevLogin(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DevLogin", reflect.TypeOf((*MockService)(nil).DevLogin), arg0, arg1)
 }
 
 // LoginWithTelegram mocks base method.

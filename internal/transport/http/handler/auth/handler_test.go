@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
+	"github.com/backforge-app/backforge/internal/config"
 	serviceauth "github.com/backforge-app/backforge/internal/service/auth"
 )
 
@@ -30,7 +31,12 @@ func newHandlerMocks(t *testing.T) (*Handler, *MockService) {
 	ctrl := gomock.NewController(t)
 	svc := NewMockService(ctrl)
 	log := newTestLogger(t)
-	return NewHandler(svc, log), svc
+
+	cfg := &config.Config{
+		Env: "development",
+	}
+
+	return NewHandler(svc, log, cfg), svc
 }
 
 func performRequest(handlerFunc http.HandlerFunc, body any, t *testing.T) *httptest.ResponseRecorder {
@@ -281,4 +287,79 @@ func TestRefresh_ValidationError(t *testing.T) {
 	assert.NotEmpty(t, details)
 	assert.Contains(t, details, "refresh_token")
 	assert.Equal(t, "field is required", details["refresh_token"])
+}
+
+func TestHandler_DevLogin(t *testing.T) {
+	validUUID := "550e8400-e29b-41d4-a716-446655440000"
+
+	tests := []struct {
+		name           string
+		env            string
+		requestBody    any
+		setupMock      func(svc *MockService)
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:        "Success",
+			env:         "development",
+			requestBody: devLoginRequest{UserID: validUUID},
+			setupMock: func(svc *MockService) {
+				svc.EXPECT().
+					DevLogin(gomock.Any(), gomock.Any()).
+					Return("access", "refresh", nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Blocked in Production",
+			env:            "production",
+			requestBody:    devLoginRequest{UserID: validUUID},
+			setupMock:      func(svc *MockService) {},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "Invalid UUID Format",
+			env:            "development",
+			requestBody:    devLoginRequest{UserID: "not-a-uuid"},
+			setupMock:      func(svc *MockService) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "validation failed",
+		},
+		{
+			name:        "Service Error",
+			env:         "development",
+			requestBody: devLoginRequest{UserID: validUUID},
+			setupMock: func(svc *MockService) {
+				svc.EXPECT().
+					DevLogin(gomock.Any(), gomock.Any()).
+					Return("", "", errors.New("db error"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedError:  ErrInternalServer.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler, svc := newHandlerMocks(t)
+			handler.cfg.Env = tt.env
+			tt.setupMock(svc)
+
+			rr := performRequest(handler.DevLogin, tt.requestBody, t)
+
+			assert.Equal(t, tt.expectedStatus, rr.Code)
+
+			if tt.expectedError != "" {
+				var resp map[string]any
+				decodeBody(t, rr, &resp)
+				assert.Equal(t, tt.expectedError, resp["error"])
+			} else if tt.expectedStatus == http.StatusOK {
+				var resp loginResponse
+				decodeBody(t, rr, &resp)
+				assert.NotEmpty(t, resp.AccessToken)
+				assert.NotEmpty(t, resp.RefreshToken)
+			}
+		})
+	}
 }

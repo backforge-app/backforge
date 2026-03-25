@@ -5,8 +5,10 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/backforge-app/backforge/internal/config"
 	serviceauth "github.com/backforge-app/backforge/internal/service/auth"
 	"github.com/backforge-app/backforge/internal/transport/http/httputil"
 	"github.com/backforge-app/backforge/internal/transport/http/render"
@@ -16,11 +18,12 @@ import (
 type Handler struct {
 	service Service
 	log     *zap.SugaredLogger
+	cfg     *config.Config
 }
 
 // NewHandler creates a new authentication Handler with the provided service and logger.
-func NewHandler(service Service, log *zap.SugaredLogger) *Handler {
-	return &Handler{service: service, log: log}
+func NewHandler(service Service, log *zap.SugaredLogger, cfg *config.Config) *Handler {
+	return &Handler{service: service, log: log, cfg: cfg}
 }
 
 // Login godoc
@@ -154,5 +157,49 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if err := render.OK(w, resp); err != nil {
 		h.log.With(zap.Error(err)).
 			Warn("failed to send refresh response")
+	}
+}
+
+// DevLogin handles POST /dev-login requests.
+// This endpoint exists only for development to bypass Telegram login.
+func (h *Handler) DevLogin(w http.ResponseWriter, r *http.Request) {
+	if h.cfg.Env != "development" {
+		h.log.Warn("Attempt to use DevLogin in production!")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	ctx := r.Context()
+
+	var req devLoginRequest
+	if httputil.DecodeAndValidate(r, w, h.log, &req, "dev login") {
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		h.log.Warn("invalid user id")
+		if sendErr := render.Fail(w, http.StatusBadRequest, ErrInvalidRequest); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send unauthorized response")
+		}
+		return
+	}
+
+	accessToken, refreshToken, err := h.service.DevLogin(ctx, userID)
+	if err != nil {
+		h.log.With(zap.Error(err)).Error("dev login failed")
+		if sendErr := render.FailMessage(w, http.StatusInternalServerError, ErrInternalServer.Error()); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send internal server error response")
+		}
+		return
+	}
+
+	resp := loginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	if err := render.OK(w, resp); err != nil {
+		h.log.With(zap.Error(err)).Warn("failed to send dev login response")
 	}
 }

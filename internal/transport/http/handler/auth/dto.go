@@ -28,3 +28,7 @@ type refreshResponse struct {
 	AccessToken  string `json:"access_token"`  // New JWT token
 	RefreshToken string `json:"refresh_token"` // New refresh token
 }
+
+type devLoginRequest struct {
+	UserID string `json:"user_id" validate:"required,uuid"`
+}
