@@ -17,5 +17,10 @@ export const questionApi = {
 	getBySlug: async (slug: string) => {
 		const { data } = await api.get<QuestionDetailDto>(`/questions/${slug}`);
 		return data;
-	}
+	},
+
+	listByTopic: async (topicId: string) => {
+    const { data } = await api.get<QuestionDetailDto[]>(`/topics/${topicId}/questions`);
+    return data;
+  }
 };

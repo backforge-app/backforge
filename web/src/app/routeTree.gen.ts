@@ -11,9 +11,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TopicsSlugRouteImport } from './routes/topics.$slug'
 import { Route as QuestionsSlugRouteImport } from './routes/questions.$slug'
 
 const IndexLazyRouteImport = createFileRoute('/')()
+const TopicsIndexLazyRouteImport = createFileRoute('/topics/')()
 const QuestionsIndexLazyRouteImport = createFileRoute('/questions/')()
 
 const IndexLazyRoute = IndexLazyRouteImport.update({
@@ -21,6 +23,11 @@ const IndexLazyRoute = IndexLazyRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+const TopicsIndexLazyRoute = TopicsIndexLazyRouteImport.update({
+  id: '/topics/',
+  path: '/topics/',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/topics.index.lazy').then((d) => d.Route))
 const QuestionsIndexLazyRoute = QuestionsIndexLazyRouteImport.update({
   id: '/questions/',
   path: '/questions/',
@@ -28,6 +35,11 @@ const QuestionsIndexLazyRoute = QuestionsIndexLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/questions.index.lazy').then((d) => d.Route),
 )
+const TopicsSlugRoute = TopicsSlugRouteImport.update({
+  id: '/topics/$slug',
+  path: '/topics/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuestionsSlugRoute = QuestionsSlugRouteImport.update({
   id: '/questions/$slug',
   path: '/questions/$slug',
@@ -37,31 +49,50 @@ const QuestionsSlugRoute = QuestionsSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/questions/$slug': typeof QuestionsSlugRoute
+  '/topics/$slug': typeof TopicsSlugRoute
   '/questions/': typeof QuestionsIndexLazyRoute
+  '/topics/': typeof TopicsIndexLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/questions/$slug': typeof QuestionsSlugRoute
+  '/topics/$slug': typeof TopicsSlugRoute
   '/questions': typeof QuestionsIndexLazyRoute
+  '/topics': typeof TopicsIndexLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexLazyRoute
   '/questions/$slug': typeof QuestionsSlugRoute
+  '/topics/$slug': typeof TopicsSlugRoute
   '/questions/': typeof QuestionsIndexLazyRoute
+  '/topics/': typeof TopicsIndexLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/questions/$slug' | '/questions/'
+  fullPaths:
+    | '/'
+    | '/questions/$slug'
+    | '/topics/$slug'
+    | '/questions/'
+    | '/topics/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/questions/$slug' | '/questions'
-  id: '__root__' | '/' | '/questions/$slug' | '/questions/'
+  to: '/' | '/questions/$slug' | '/topics/$slug' | '/questions' | '/topics'
+  id:
+    | '__root__'
+    | '/'
+    | '/questions/$slug'
+    | '/topics/$slug'
+    | '/questions/'
+    | '/topics/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   QuestionsSlugRoute: typeof QuestionsSlugRoute
+  TopicsSlugRoute: typeof TopicsSlugRoute
   QuestionsIndexLazyRoute: typeof QuestionsIndexLazyRoute
+  TopicsIndexLazyRoute: typeof TopicsIndexLazyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -73,11 +104,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/topics/': {
+      id: '/topics/'
+      path: '/topics'
+      fullPath: '/topics/'
+      preLoaderRoute: typeof TopicsIndexLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/questions/': {
       id: '/questions/'
       path: '/questions'
       fullPath: '/questions/'
       preLoaderRoute: typeof QuestionsIndexLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/topics/$slug': {
+      id: '/topics/$slug'
+      path: '/topics/$slug'
+      fullPath: '/topics/$slug'
+      preLoaderRoute: typeof TopicsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/questions/$slug': {
@@ -93,7 +138,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   QuestionsSlugRoute: QuestionsSlugRoute,
+  TopicsSlugRoute: TopicsSlugRoute,
   QuestionsIndexLazyRoute: QuestionsIndexLazyRoute,
+  TopicsIndexLazyRoute: TopicsIndexLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -58,7 +58,7 @@ export const QuestionsPage = () => {
 		<div className="mx-auto flex max-w-5xl flex-col gap-7 px-2.5 py-15">
 			<h1 className="text-h1 text-foreground">Вопросы</h1>
 
-			<div className="flex items-start gap-2.5">
+			<div className="flex items-start gap-3.5">
 				{/* Search */}
 				<InputGroup className="flex-1 bg-background dark:bg-input dark:border-0 rounded-[8px]">
 					<InputGroupInput
@@ -103,7 +103,7 @@ export const QuestionsPage = () => {
 				Найдено вопросов: {allQuestions.length}
 			</p>
 
-			<div className="flex flex-col gap-2.5">
+			<div className="flex flex-col gap-3.5">
 				{status === 'pending' ? (
 					<>
 						<QuestionSkeleton />

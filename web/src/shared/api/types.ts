@@ -38,3 +38,45 @@ export interface QuestionDetailDto {
 	created_by?: string;
 	updated_by?: string;
 }
+
+export type TopicRowDto = {
+	id: string;
+	title: string;
+	slug: string;
+	question_count: number;
+};
+
+export interface TopicDetailDto {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+}
+
+export interface ProgressAggregateDto {
+  known: number;
+  learned: number;
+  skipped: number;
+  new: number;
+  current_position: number;
+}
+
+export interface MarkProgressDto {
+  topic_id: string;
+  question_id: string;
+}
+
+export interface TelegramAuthPayload {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  auth_date: number;
+  hash: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+}
