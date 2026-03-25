@@ -126,7 +126,7 @@ func New(ctx context.Context) (*App, error) {
 
 	// Setup HTTP handlers.
 	handlers := transporthttp.Handlers{
-		Auth:      auth.NewHandler(svcs.Auth, log),
+		Auth:      auth.NewHandler(svcs.Auth, log, cfg),
 		User:      user.NewHandler(svcs.User, log),
 		Question:  question.NewHandler(svcs.Question, log),
 		Topic:     topic.NewHandler(svcs.Topic, log),

@@ -6,6 +6,8 @@ package auth
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/backforge-app/backforge/internal/service/auth"
 )
 
@@ -16,4 +18,8 @@ type Service interface {
 
 	// Refresh exchanges a valid refresh token for new access and refresh tokens.
 	Refresh(ctx context.Context, refreshToken string) (accessToken, newRefreshToken string, err error)
+
+	// DevLogin issues tokens for an existing user without Telegram verification.
+	// Intended for development only.
+	DevLogin(ctx context.Context, userID uuid.UUID) (accessToken, refreshToken string, err error)
 }

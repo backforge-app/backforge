@@ -148,6 +148,30 @@ func (s *Service) Refresh(
 	return newAccessToken, newRefreshToken, nil
 }
 
+// DevLogin issues tokens for an existing user without Telegram verification.
+// Intended for development only.
+func (s *Service) DevLogin(
+	ctx context.Context,
+	userID uuid.UUID,
+) (accessToken, refreshToken string, err error) {
+	u, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		return "", "", fmt.Errorf("get user: %w", err)
+	}
+
+	accessToken, err = s.generateAccessToken(u)
+	if err != nil {
+		return "", "", fmt.Errorf("generate access token: %w", err)
+	}
+
+	refreshToken, err = s.generateRefreshToken(ctx, u.ID)
+	if err != nil {
+		return "", "", fmt.Errorf("generate refresh token: %w", err)
+	}
+
+	return accessToken, refreshToken, nil
+}
+
 // generateAccessToken creates a new JWT access token for the given user.
 func (s *Service) generateAccessToken(user *domain.User) (string, error) {
 	now := time.Now()

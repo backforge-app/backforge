@@ -64,6 +64,11 @@ func NewRouter(
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/login", handlers.Auth.Login)
 			r.Post("/refresh", handlers.Auth.Refresh)
+
+			// DEV ONLY
+			if cfg.Env == "development" {
+				r.Post("/dev-login", handlers.Auth.DevLogin)
+			}
 		})
 
 		// --- Public Discovery Routes (No Auth Required) ---
