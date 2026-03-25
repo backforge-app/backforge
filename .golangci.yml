@@ -49,6 +49,7 @@ linters:
     paths:
       - "api/swagger/*"
       - "test/integration/*"
+      - "web/node_modules/*"
 
 formatters:
   enable:
