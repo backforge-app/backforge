@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/backforge-app/backforge/internal/domain"
+	"github.com/backforge-app/backforge/internal/repository/progress"
 )
 
 // Service manages user progress across questions and topics.
@@ -78,7 +79,7 @@ func (s *Service) markAndAdvance(
 	// Get current topic position.
 	pos := 0
 	topicProgress, err := s.topicRepo.GetByUserAndTopic(ctx, input.UserID, input.TopicID)
-	if err != nil && !errors.Is(err, ErrTopicProgressNotFound) {
+	if err != nil && !errors.Is(err, progress.ErrTopicProgressNotFound) {
 		return fmt.Errorf("get topic progress: %w", err)
 	}
 
@@ -122,7 +123,7 @@ func (s *Service) GetByTopic(
 
 	topicProgress, err := s.topicRepo.GetByUserAndTopic(ctx, userID, topicID)
 	if err != nil {
-		if errors.Is(err, ErrTopicProgressNotFound) {
+		if errors.Is(err, progress.ErrTopicProgressNotFound) {
 			aggregate.CurrentPosition = 0
 		} else {
 			return nil, fmt.Errorf("get topic progress: %w", err)
@@ -141,7 +142,7 @@ func (s *Service) GetByUserAndQuestion(
 ) (*domain.UserQuestionProgress, error) {
 	p, err := s.questionRepo.GetByUserAndQuestion(ctx, userID, questionID)
 	if err != nil {
-		if errors.Is(err, ErrQuestionProgressNotFound) {
+		if errors.Is(err, progress.ErrQuestionProgressNotFound) {
 			// Return a "default" progress (status 'new') if no progress exists.
 			return &domain.UserQuestionProgress{
 				UserID:     userID,
