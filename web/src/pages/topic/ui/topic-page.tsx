@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft, ChevronLeft, ChevronRight,
 	CircleCheckBig, Sparkles, SkipForward, RotateCcw, Loader2,
-	Info
+	Info,
+	Trophy
 } from "lucide-react";
 
 import { topicApi } from "@/entities/topic/api/topic-api";
@@ -12,6 +13,7 @@ import { questionApi } from "@/entities/question/api/question-api";
 import { useTopicProgress, useMarkProgress, useResetProgress } from "@/entities/progress/model/use-progress";
 import { Progress } from "@/shared/ui/progress";
 import { Badge } from "@/shared/ui/badge";
+import { useSession } from "@/entities/session/model/use-session";
 
 const levelLabelMap: Record<string, string> = {
 	Beginner: "начинающих",
@@ -19,9 +21,12 @@ const levelLabelMap: Record<string, string> = {
 	Advanced: "продвинутых",
 };
 
-const isAuthenticated = false
+type MarkType = 'known' | 'learned' | 'skipped';
 
 export const TopicPage = ({ slug }: { slug: string }) => {
+	const { isAuthenticated } = useSession();
+	const isAuth = isAuthenticated();
+
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [showAnswer, setShowAnswer] = useState(false);
 	const [isInitialized, setIsInitialized] = useState(false);
@@ -31,6 +36,8 @@ export const TopicPage = ({ slug }: { slug: string }) => {
 		learned: 0,
 		skipped: 0
 	});
+
+	const [localAnswers, setLocalAnswers] = useState<Record<string, MarkType>>({});
 
 	const { data: topic, status: topicStatus } = useQuery({
 		queryKey: ['topic', slug],
@@ -47,7 +54,7 @@ export const TopicPage = ({ slug }: { slug: string }) => {
 	const markMutation = useMarkProgress();
 	const resetMutation = useResetProgress();
 
-	const displayProgress = isAuthenticated
+	const displayProgress = isAuth
 		? {
 			known: serverProgress?.known || 0,
 			learned: serverProgress?.learned || 0,
@@ -56,11 +63,11 @@ export const TopicPage = ({ slug }: { slug: string }) => {
 		: localProgress;
 
 	useEffect(() => {
-		if (isAuthenticated && serverProgress && !isInitialized && questions.length > 0) {
-			setCurrentIndex(Math.min(serverProgress.current_position, questions.length - 1));
+		if (isAuth && serverProgress && !isInitialized && questions.length > 0) {
+			setCurrentIndex(Math.min(serverProgress.current_position, questions.length));
 			setIsInitialized(true);
 		}
-	}, [serverProgress, isInitialized, questions.length, isAuthenticated]);
+	}, [serverProgress, isInitialized, questions.length, isAuth]);
 
 	if (topicStatus === 'pending' || questionsStatus === 'pending') {
 		return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -68,46 +75,76 @@ export const TopicPage = ({ slug }: { slug: string }) => {
 
 	if (!topic) return null;
 
-	const currentQuestion = questions[currentIndex];
-	const progressPercent = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
+	const isCompleted = currentIndex === questions.length;
+	const currentQuestion = isCompleted ? null : questions[currentIndex];
 
-	const goNext = () => {
-		if (currentIndex < questions.length - 1) {
+	const totalCards = questions.length > 0 ? questions.length + 1 : 0;
+
+	const progressPercent = totalCards > 0
+    ? ((currentIndex + 1) / totalCards) * 100
+    : 0;
+
+	const processMark = (type: MarkType, qId: string) => {
+		const prevAnswer = localAnswers[qId];
+
+		if (prevAnswer !== type) {
+			if (isAuth) {
+				markMutation.mutate({
+					type,
+					payload: { topic_id: topic.id, question_id: qId }
+				});
+			} else {
+				setLocalProgress(prev => {
+					const next = { ...prev };
+					if (prevAnswer) {
+						next[prevAnswer] = Math.max(0, next[prevAnswer] - 1);
+					}
+					next[type]++;
+					return next;
+				});
+			}
+			setLocalAnswers(prev => ({ ...prev, [qId]: type }));
+		}
+	};
+
+	const handleNextClick = () => {
+		if (!currentQuestion) return;
+
+		if (!localAnswers[currentQuestion.id]) {
+			processMark('skipped', currentQuestion.id);
+		}
+
+		if (currentIndex < questions.length) {
 			setCurrentIndex(p => p + 1);
 			setShowAnswer(false);
 		}
 	};
 
-	const goPrev = () => {
+	const handlePrevClick = () => {
 		if (currentIndex > 0) {
 			setCurrentIndex(p => p - 1);
 			setShowAnswer(false);
 		}
 	};
 
-	const handleMark = (type: 'known' | 'learned' | 'skipped') => {
-		if (!topic || !questions[currentIndex]) return;
+	const handleMarkClick = (type: MarkType) => {
+		if (!currentQuestion) return;
 
-		if (isAuthenticated) {
-			markMutation.mutate({
-				type,
-				payload: { topic_id: topic.id, question_id: questions[currentIndex].id }
-			});
-		} else {
-			setLocalProgress(prev => ({
-				...prev,
-				[type]: prev[type] + 1
-			}));
+		processMark(type, currentQuestion.id);
+
+		if (currentIndex < questions.length) {
+			setCurrentIndex(p => p + 1);
+			setShowAnswer(false);
 		}
-		goNext();
 	};
 
 	const handleReset = () => {
-		if (isAuthenticated && topic) {
+		if (isAuth && topic) {
 			resetMutation.mutate(topic.id);
 		} else {
 			setLocalProgress({ known: 0, learned: 0, skipped: 0 });
 		}
+		setLocalAnswers({});
 		setCurrentIndex(0);
 		setShowAnswer(false);
 	};
@@ -159,18 +196,18 @@ export const TopicPage = ({ slug }: { slug: string }) => {
 								/>
 								<div className="flex items-center gap-1.25">
 									<button
-										onClick={goPrev}
+										onClick={handlePrevClick}
 										disabled={currentIndex === 0}
 										className="text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
 									>
 										<ChevronLeft className="w-4 h-4" />
 									</button>
 									<span className="text-caption-bold text-foreground w-12.5 text-center">
-										{currentIndex + 1} / {questions.length}
+										{currentIndex + 1} / {totalCards}
 									</span>
 									<button
-										onClick={goNext}
-										disabled={currentIndex === questions.length - 1}
+										onClick={handleNextClick}
+										disabled={isCompleted}
 										className="text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
 									>
 										<ChevronRight className="w-4 h-4" />
@@ -190,64 +227,97 @@ export const TopicPage = ({ slug }: { slug: string }) => {
 							</div>
 						</div>
 
-						<div className="border border-border rounded-[10px] p-8 flex flex-col items-center gap-2.5 bg-card min-h-96.5 transition-all duration-300">
-							<span className="text-body text-muted-foreground">
-								Вопросы для собеседования по {topic.title} для {levelLabelMap[currentQuestion.level] || 'всех'}
-							</span>
+						{isCompleted ? (
+							<div className="border border-border rounded-[10px] p-8 flex flex-col items-center justify-center gap-6 bg-card min-h-96.5 transition-all duration-300 animate-in fade-in zoom-in-95">
+								<div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+									<Trophy className="h-10 w-10 text-primary" />
+								</div>
 
-							<h2 className="flex items-center justify-center h-65 text-center text-question text-foreground">
-								{currentQuestion.title}
-							</h2>
+								<div className="flex flex-col gap-2.5 text-center items-center">
+									<h2 className="text-h2 text-foreground">Тема пройдена!</h2>
+									<p className="text-body text-muted-foreground max-w-sm">
+										Вы ответили на все вопросы. Отличная работа! Можете освежить знания позже или перейти к другим темам.
+									</p>
+								</div>
 
-							{showAnswer ? (
-								<div className="flex flex-col gap-5 items-center w-full">
-									<div className="flex items-center gap-5 w-full">
-										<div className="h-px bg-border flex-1" />
-										<span className="text-body text-muted-foreground">Ответ</span>
-										<div className="h-px bg-border flex-1" />
-									</div>
+								<div className="flex flex-wrap items-center justify-center gap-4 mt-2">
+									<button
+										onClick={handleReset}
+										className="flex items-center justify-center gap-2 px-5 py-2.5 border border-border rounded-[10px] bg-card hover:bg-muted cursor-pointer transition-colors"
+									>
+										<RotateCcw className="w-4.5 h-4.5 text-foreground" />
+										<span className="text-body text-foreground">Начать заново</span>
+									</button>
 
-									{/* Временный JSON блок до подключения TipTap */}
-									<pre className="text-body text-foreground whitespace-pre-wrap font-mono bg-muted/30 p-4 rounded-lg overflow-x-auto w-full">
-										{JSON.stringify(currentQuestion.content, null, 2)}
-									</pre>
+									<Link
+										to="/topics"
+										className="flex items-center justify-center gap-2 px-5 py-2.5 border border-transparent rounded-[10px] bg-primary text-primary-foreground hover:opacity-90 cursor-pointer transition-opacity"
+									>
+										<span className="text-body font-medium">Вернуться к темам</span>
+									</Link>
+								</div>
+							</div>
+						) : (
+							<>
+								<div className="border border-border rounded-[10px] p-8 flex flex-col items-center gap-2.5 bg-card min-h-96.5 transition-all duration-300">
+									<span className="text-body text-muted-foreground">
+										Вопросы для собеседования по {topic.title} для {levelLabelMap[currentQuestion!.level] || 'всех'}
+									</span>
 
-									<button onClick={() => setShowAnswer(false)} className="text-body text-muted-foreground underline text-center hover:text-foreground w-fit cursor-pointer transition-colors">
-										Скрыть ответ
+									<h2 className="flex items-center justify-center h-65 text-center text-question text-foreground">
+										{currentQuestion!.title}
+									</h2>
+
+									{showAnswer ? (
+										<div className="flex flex-col gap-5 items-center w-full">
+											<div className="flex items-center gap-5 w-full">
+												<div className="h-px bg-border flex-1" />
+												<span className="text-body text-muted-foreground">Ответ</span>
+												<div className="h-px bg-border flex-1" />
+											</div>
+
+											<pre className="text-body text-foreground whitespace-pre-wrap font-mono bg-muted/30 p-4 rounded-lg overflow-x-auto w-full">
+												{JSON.stringify(currentQuestion!.content, null, 2)}
+											</pre>
+
+											<button onClick={() => setShowAnswer(false)} className="text-body text-muted-foreground underline text-center hover:text-foreground w-fit cursor-pointer transition-colors">
+												Скрыть ответ
+											</button>
+										</div>
+									) : (
+										<button onClick={() => setShowAnswer(true)} className="text-body text-muted-foreground underline text-center hover:text-foreground w-fit cursor-pointer transition-colors">
+											Показать ответ
+										</button>
+									)}
+								</div>
+
+								<div className="flex flex-wrap items-center gap-3.5">
+									<button
+										onClick={() => handleMarkClick('known')}
+										className="flex flex-1 items-center justify-center gap-2.5 px-3 py-3 border border-border rounded-[10px] bg-card hover:bg-muted cursor-pointer transition-colors"
+									>
+										<CircleCheckBig className="w-4.5 h-4.5 text-foreground" />
+										<span className="text-body text-foreground">Знаю этот вопрос</span>
+									</button>
+
+									<button
+										onClick={() => handleMarkClick('learned')}
+										className="flex flex-1 items-center justify-center gap-2.5 px-3 py-3 border border-border rounded-[10px] bg-card hover:bg-muted cursor-pointer transition-colors"
+									>
+										<Sparkles className="w-4.5 h-4.5 text-foreground" />
+										<span className="text-body text-foreground">Не знал этот вопрос</span>
+									</button>
+
+									<button
+										onClick={() => handleMarkClick('skipped')}
+										className="flex flex-1 items-center justify-center gap-2.5 px-3 py-3 border border-border rounded-[10px] bg-card hover:bg-destructive/10 cursor-pointer group transition-colors"
+									>
+										<SkipForward className="w-4.5 h-4.5 text-destructive" />
+										<span className="text-body text-destructive">Пропустить</span>
 									</button>
 								</div>
-							) : (
-								<button onClick={() => setShowAnswer(true)} className="text-body text-muted-foreground underline text-center hover:text-foreground w-fit cursor-pointer transition-colors">
-									Показать ответ
-								</button>
-							)}
-						</div>
-
-						<div className="flex flex-wrap items-center gap-3.5">
-							<button
-								onClick={() => handleMark('known')}
-								className="flex flex-1 items-center justify-center gap-2.5 px-3 py-3 border border-border rounded-[10px] bg-card hover:bg-muted cursor-pointer transition-colors"
-							>
-								<CircleCheckBig className="w-4.5 h-4.5 text-foreground" />
-								<span className="text-body text-foreground">Знаю этот вопрос</span>
-							</button>
-
-							<button
-								onClick={() => handleMark('learned')}
-								className="flex flex-1 items-center justify-center gap-2.5 px-3 py-3 border border-border rounded-[10px] bg-card hover:bg-muted cursor-pointer transition-colors"
-							>
-								<Sparkles className="w-4.5 h-4.5 text-foreground" />
-								<span className="text-body text-foreground">Не знал этот вопрос</span>
-							</button>
-
-							<button
-								onClick={() => handleMark('skipped')}
-								className="flex flex-1 items-center justify-center gap-2.5 px-3 py-3 border border-border rounded-[10px] bg-card hover:bg-destructive/10 cursor-pointer group transition-colors"
-							>
-								<SkipForward className="w-4.5 h-4.5 text-destructive" />
-								<span className="text-body text-destructive">Пропустить</span>
-							</button>
-						</div>
+							</>
+						)}
 					</div>
 				</>
 			) : (
@@ -256,7 +326,6 @@ export const TopicPage = ({ slug }: { slug: string }) => {
 				</div>
 			)}
 
-			{/* --- Справочник вопросов --- */}
 			{questions.length > 0 && (
 				<div className="flex flex-col gap-7">
 					<div className="flex flex-col gap-5">
