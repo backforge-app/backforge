@@ -5,8 +5,8 @@ import { ThemeToggle } from "@/features/theme/ui/theme-toggle";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/ui/input-group";
 import { Kbd } from "@/shared/ui/kbd";
 import { useSession } from "@/entities/session/model/use-session";
-import { TelegramLogin } from "@/features/auth/ui/telegram-login";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { DevLogin } from "@/features/auth/ui/dev-login";
 
 const NAV_ITEMS = [
 	{ label: "Вопросы", href: "/questions" },
@@ -84,7 +84,9 @@ export const Header = () => {
 							</PopoverContent>
 						</Popover>
 					) : (
-						<TelegramLogin botName="backforge_bot" />
+						<div className="flex items-center gap-2">
+               <DevLogin />
+            </div>
 					)}
 				</div>
 
