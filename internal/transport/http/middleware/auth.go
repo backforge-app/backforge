@@ -51,7 +51,7 @@ func Auth(secret string, log *zap.SugaredLogger) func(http.Handler) http.Handler
 			// 2. Expect the format "Bearer <JWT>".
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-				log.With(zap.String("authorization", authHeader)).Warn("invalid authorization header format")
+				log.Warn("invalid authorization header format")
 				renderFailUnauthorized(w, log)
 				return
 			}
