@@ -1,7 +1,6 @@
 package analytics
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -27,7 +26,7 @@ func setupTest(t *testing.T) (*MockService, *Handler) {
 
 // withAuthContext injects a user ID into the request context.
 func withAuthContext(r *http.Request, userID uuid.UUID) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), middleware.UserIDKey, userID))
+	return r.WithContext(middleware.WithUserID(r.Context(), userID))
 }
 
 func TestHandler_GetOverallProgress(t *testing.T) {

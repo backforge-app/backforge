@@ -15,12 +15,12 @@ import (
 	"github.com/backforge-app/backforge/internal/transport/http/render"
 )
 
-// ContextKey is a private type to prevent collisions in the context map.
-type ContextKey string
+// contextKey is a private type to prevent collisions in the context map.
+type contextKey string
 
 var (
-	// UserIDKey is the context key used to store/retrieve the authenticated user ID.
-	UserIDKey ContextKey = "userID"
+	// userIDKey is the context key used to store/retrieve the authenticated user ID.
+	userIDKey contextKey = "userID"
 )
 
 var (
@@ -84,7 +84,7 @@ func Auth(secret string, log *zap.SugaredLogger) func(http.Handler) http.Handler
 			}
 
 			// 4. Inject userID into the request context.
-			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx := context.WithValue(r.Context(), userIDKey, userID)
 
 			// 5. Call the next handler with the updated context.
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -129,11 +129,17 @@ func validateToken(tokenString, secret string) (uuid.UUID, error) {
 	return userID, nil
 }
 
+// WithUserID returns a new context with the provided user ID injected.
+// This is useful for testing or internal services that need to bypass standard auth.
+func WithUserID(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
+
 // UserIDFromContext retrieves the authenticated user's UUID from the request context.
 //
 // Returns uuid.Nil and false if the user ID is missing or has an incorrect type.
 func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
-	id, ok := ctx.Value(UserIDKey).(uuid.UUID)
+	id, ok := ctx.Value(userIDKey).(uuid.UUID)
 	return id, ok
 }
 
