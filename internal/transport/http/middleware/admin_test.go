@@ -38,7 +38,7 @@ func TestAdminOnly(t *testing.T) {
 		h := mw(nextHandler)
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req = req.WithContext(context.WithValue(req.Context(), UserIDKey, userID))
+		req = req.WithContext(WithUserID(req.Context(), userID))
 		rr := httptest.NewRecorder()
 
 		h.ServeHTTP(rr, req)
@@ -55,7 +55,7 @@ func TestAdminOnly(t *testing.T) {
 		h := mw(nextHandler)
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req = req.WithContext(context.WithValue(req.Context(), UserIDKey, userID))
+		req = req.WithContext(WithUserID(req.Context(), userID))
 		rr := httptest.NewRecorder()
 
 		h.ServeHTTP(rr, req)
@@ -71,7 +71,7 @@ func TestAdminOnly(t *testing.T) {
 		h := mw(nextHandler)
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req = req.WithContext(context.WithValue(req.Context(), UserIDKey, userID))
+		req = req.WithContext(WithUserID(req.Context(), userID))
 		rr := httptest.NewRecorder()
 
 		h.ServeHTTP(rr, req)

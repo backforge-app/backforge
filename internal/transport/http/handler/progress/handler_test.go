@@ -29,7 +29,7 @@ func setupTest(t *testing.T) (*MockService, *Handler) {
 }
 
 func withAuthContext(r *http.Request, userID uuid.UUID) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), middleware.UserIDKey, userID))
+	return r.WithContext(middleware.WithUserID(r.Context(), userID))
 }
 
 func addChiContext(r *http.Request, key, value string) *http.Request {

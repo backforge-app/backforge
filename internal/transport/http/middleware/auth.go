@@ -15,15 +15,32 @@ import (
 	"github.com/backforge-app/backforge/internal/transport/http/render"
 )
 
-// ContextKey is a private type to prevent collisions in the context map.
-type ContextKey string
+// contextKey is a private type to prevent collisions in the context map.
+type contextKey string
 
 var (
-	// UserIDKey is the context key used to store/retrieve the authenticated user ID.
-	UserIDKey ContextKey = "userID"
+	// userIDKey is the context key used to store/retrieve the authenticated user ID.
+	userIDKey contextKey = "userID"
+)
 
+var (
 	// ErrUnauthorized is returned when the request lacks valid authentication credentials.
 	ErrUnauthorized = errors.New("unauthorized: missing or invalid token")
+
+	// ErrUnexpectedMethod is returned when the JWT signing method does not match the expected algorithm (e.g., HMAC).
+	ErrUnexpectedMethod = errors.New("unexpected signing method")
+
+	// ErrInvalidToken indicates that the JWT is malformed, expired, or failed signature validation.
+	ErrInvalidToken = errors.New("invalid JWT token")
+
+	// ErrFailedToReadClaim is returned when the JWT claims cannot be parsed or type-asserted to the expected format.
+	ErrFailedToReadClaim = errors.New("failed to read JWT claims")
+
+	// ErrMissingSubClaim indicates that the token is valid, but it is missing the required "sub" (subject) claim.
+	ErrMissingSubClaim = errors.New("JWT missing sub claim")
+
+	// ErrInvalidSubClaim is returned when the "sub" claim is present but cannot be successfully parsed into a valid UUID.
+	ErrInvalidSubClaim = errors.New("invalid userID in sub claim")
 )
 
 // Auth returns a middleware that validates JWT access tokens for incoming HTTP requests.
@@ -51,7 +68,7 @@ func Auth(secret string, log *zap.SugaredLogger) func(http.Handler) http.Handler
 			// 2. Expect the format "Bearer <JWT>".
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-				log.With(zap.String("authorization", authHeader)).Warn("invalid authorization header format")
+				log.Warn("invalid authorization header format")
 				renderFailUnauthorized(w, log)
 				return
 			}
@@ -67,7 +84,7 @@ func Auth(secret string, log *zap.SugaredLogger) func(http.Handler) http.Handler
 			}
 
 			// 4. Inject userID into the request context.
-			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx := context.WithValue(r.Context(), userIDKey, userID)
 
 			// 5. Call the next handler with the updated context.
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -84,39 +101,45 @@ func validateToken(tokenString, secret string) (uuid.UUID, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Ensure the signing method is HMAC.
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
+			return nil, ErrUnexpectedMethod
 		}
 		return []byte(secret), nil
 	})
 	if err != nil || !token.Valid {
-		return uuid.Nil, errors.New("invalid JWT token")
+		return uuid.Nil, ErrInvalidToken
 	}
 
 	// Extract claims.
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return uuid.Nil, errors.New("failed to read JWT claims")
+		return uuid.Nil, ErrFailedToReadClaim
 	}
 
 	// Extract the "sub" claim as userID.
 	subRaw, ok := claims["sub"].(string)
 	if !ok {
-		return uuid.Nil, errors.New("JWT missing sub claim")
+		return uuid.Nil, ErrMissingSubClaim
 	}
 
 	userID, err := uuid.Parse(subRaw)
 	if err != nil {
-		return uuid.Nil, errors.New("invalid userID in sub claim")
+		return uuid.Nil, ErrInvalidSubClaim
 	}
 
 	return userID, nil
+}
+
+// WithUserID returns a new context with the provided user ID injected.
+// This is useful for testing or internal services that need to bypass standard auth.
+func WithUserID(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
 }
 
 // UserIDFromContext retrieves the authenticated user's UUID from the request context.
 //
 // Returns uuid.Nil and false if the user ID is missing or has an incorrect type.
 func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
-	id, ok := ctx.Value(UserIDKey).(uuid.UUID)
+	id, ok := ctx.Value(userIDKey).(uuid.UUID)
 	return id, ok
 }
 

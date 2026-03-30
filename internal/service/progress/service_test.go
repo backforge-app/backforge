@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/backforge-app/backforge/internal/domain"
+	repoprogress "github.com/backforge-app/backforge/internal/repository/progress"
 )
 
 func newTestService(ctrl *gomock.Controller) (
@@ -70,7 +71,7 @@ func TestService_MarkKnown(t *testing.T) {
 
 		tRepo.EXPECT().
 			GetByUserAndTopic(ctx, userID, topicID).
-			Return(nil, ErrTopicProgressNotFound)
+			Return(nil, repoprogress.ErrTopicProgressNotFound)
 
 		tRepo.EXPECT().
 			SetPosition(ctx, userID, topicID, 1).
@@ -119,7 +120,7 @@ func TestService_MarkSkipped(t *testing.T) {
 
 	tRepo.EXPECT().
 		GetByUserAndTopic(ctx, userID, topicID).
-		Return(nil, ErrTopicProgressNotFound)
+		Return(nil, repoprogress.ErrTopicProgressNotFound)
 
 	tRepo.EXPECT().
 		SetPosition(ctx, userID, topicID, 1).
@@ -185,7 +186,7 @@ func TestService_GetByTopic(t *testing.T) {
 
 		tRepo.EXPECT().
 			GetByUserAndTopic(ctx, userID, topicID).
-			Return(nil, ErrTopicProgressNotFound)
+			Return(nil, repoprogress.ErrTopicProgressNotFound)
 
 		result, err := service.GetByTopic(ctx, userID, topicID)
 
@@ -234,7 +235,7 @@ func TestService_GetByUserAndQuestion(t *testing.T) {
 	t.Run("not found returns new", func(t *testing.T) {
 		qRepo.EXPECT().
 			GetByUserAndQuestion(ctx, userID, questionID).
-			Return(nil, ErrQuestionProgressNotFound)
+			Return(nil, repoprogress.ErrQuestionProgressNotFound)
 
 		result, err := service.GetByUserAndQuestion(ctx, userID, questionID)
 
