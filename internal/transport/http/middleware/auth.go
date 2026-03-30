@@ -21,9 +21,26 @@ type ContextKey string
 var (
 	// UserIDKey is the context key used to store/retrieve the authenticated user ID.
 	UserIDKey ContextKey = "userID"
+)
 
+var (
 	// ErrUnauthorized is returned when the request lacks valid authentication credentials.
 	ErrUnauthorized = errors.New("unauthorized: missing or invalid token")
+
+	// ErrUnexpectedMethod is returned when the JWT signing method does not match the expected algorithm (e.g., HMAC).
+	ErrUnexpectedMethod = errors.New("unexpected signing method")
+
+	// ErrInvalidToken indicates that the JWT is malformed, expired, or failed signature validation.
+	ErrInvalidToken = errors.New("invalid JWT token")
+
+	// ErrFailedToReadClaim is returned when the JWT claims cannot be parsed or type-asserted to the expected format.
+	ErrFailedToReadClaim = errors.New("failed to read JWT claims")
+
+	// ErrMissingSubClaim indicates that the token is valid, but it is missing the required "sub" (subject) claim.
+	ErrMissingSubClaim = errors.New("JWT missing sub claim")
+
+	// ErrInvalidSubClaim is returned when the "sub" claim is present but cannot be successfully parsed into a valid UUID.
+	ErrInvalidSubClaim = errors.New("invalid userID in sub claim")
 )
 
 // Auth returns a middleware that validates JWT access tokens for incoming HTTP requests.
@@ -84,29 +101,29 @@ func validateToken(tokenString, secret string) (uuid.UUID, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Ensure the signing method is HMAC.
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
+			return nil, ErrUnexpectedMethod
 		}
 		return []byte(secret), nil
 	})
 	if err != nil || !token.Valid {
-		return uuid.Nil, errors.New("invalid JWT token")
+		return uuid.Nil, ErrInvalidToken
 	}
 
 	// Extract claims.
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return uuid.Nil, errors.New("failed to read JWT claims")
+		return uuid.Nil, ErrFailedToReadClaim
 	}
 
 	// Extract the "sub" claim as userID.
 	subRaw, ok := claims["sub"].(string)
 	if !ok {
-		return uuid.Nil, errors.New("JWT missing sub claim")
+		return uuid.Nil, ErrMissingSubClaim
 	}
 
 	userID, err := uuid.Parse(subRaw)
 	if err != nil {
-		return uuid.Nil, errors.New("invalid userID in sub claim")
+		return uuid.Nil, ErrInvalidSubClaim
 	}
 
 	return userID, nil
