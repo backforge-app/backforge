@@ -10,12 +10,16 @@ import (
 	"errors"
 	"fmt"
 	"mime"
+	"net/mail"
 	"net/smtp"
 	"strings"
 )
 
 // ErrCRLFInjection is returned when newline characters are detected in email headers.
 var ErrCRLFInjection = errors.New("crlf injection detected in email headers")
+
+// ErrInvalidEmailAddress is returned when sender or recipient email address is invalid.
+var ErrInvalidEmailAddress = errors.New("invalid email address")
 
 // Config holds the SMTP configuration required to send emails.
 type Config struct {
@@ -44,18 +48,25 @@ func New(cfg Config) *Mailer {
 // during the SMTP transmission.
 func (m *Mailer) SendHTML(ctx context.Context, to, subject, htmlBody string) error {
 	// 1. Sanitize inputs to prevent Email Header Injection (CRLF Injection).
-	// Untrusted input in 'to' or 'FromAddress' could allow an attacker to inject arbitrary SMTP headers.
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(m.cfg.FromAddress, "\r\n") {
 		return ErrCRLFInjection
 	}
 
-	// 2. Construct standard MIME headers for HTML email.
+	// 2. Validate email address syntax for recipient and sender.
+	// This ensures the strings conform to RFC 5322 and clears CodeQL taint tracking.
+	if _, err := mail.ParseAddress(to); err != nil {
+		return ErrInvalidEmailAddress
+	}
+	if _, err := mail.ParseAddress(m.cfg.FromAddress); err != nil {
+		return ErrInvalidEmailAddress
+	}
+
+	// 3. Construct standard MIME headers for HTML email.
 	headers := make(map[string]string)
 	headers["From"] = m.cfg.FromAddress
 	headers["To"] = to
 
-	// Use mime.QEncoding to safely encode the subject. This ensures Unicode
-	// characters are supported and naturally neutralizes CRLF injection in the subject.
+	// Safely encode the subject to handle Unicode and prevent CRLF.
 	headers["Subject"] = mime.QEncoding.Encode("utf-8", subject)
 
 	headers["MIME-Version"] = "1.0"
@@ -74,8 +85,7 @@ func (m *Mailer) SendHTML(ctx context.Context, to, subject, htmlBody string) err
 	addr := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
 	auth := smtp.PlainAuth("", m.cfg.Username, m.cfg.Password, m.cfg.Host)
 
-	// 3. Execute sending in a goroutine to support context cancellation.
-	// net/smtp.SendMail does not natively support context, so we wrap it.
+	// 4. Execute sending in a goroutine to support context cancellation.
 	ch := make(chan error, 1)
 	go func() {
 		ch <- smtp.SendMail(addr, auth, m.cfg.FromAddress, []string{to}, msg)
