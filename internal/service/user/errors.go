@@ -1,8 +1,3 @@
-// Package user implements the application service layer for user management.
-//
-// It contains business logic for user creation, updates, retrieval,
-// service-level errors, input DTOs (in other files), and coordinates
-// domain entities with the persistence layer.
 package user
 
 import "errors"
@@ -11,12 +6,18 @@ var (
 	// ErrUserNotFound is returned when the requested user does not exist.
 	ErrUserNotFound = errors.New("user not found")
 
-	// ErrUserTelegramIDTaken is returned when the Telegram user ID is already in use.
-	ErrUserTelegramIDTaken = errors.New("telegram user ID already taken")
+	// ErrUserEmailTaken is returned when trying to use an email that is already registered.
+	ErrUserEmailTaken = errors.New("email address is already taken")
+
+	// ErrUserUsernameTaken is returned when trying to claim a username that is already in use.
+	ErrUserUsernameTaken = errors.New("username is already taken")
 
 	// ErrUserInvalidRole is returned when an invalid user role is provided.
 	ErrUserInvalidRole = errors.New("invalid user role")
 
-	// ErrUserInvalidData is returned when invalid user data is provided.
+	// ErrUserInvalidData is returned when essential user data (like email) is missing or malformed.
 	ErrUserInvalidData = errors.New("invalid user data provided")
+
+	// ErrPasswordTooLong is returned when the password exceeds the secure hashing limit.
+	ErrPasswordTooLong = errors.New("password exceeds maximum allowed length")
 )

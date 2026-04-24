@@ -1,25 +1,43 @@
-// Package auth provides the interface to the authentication service for HTTP handlers.
-//
 //go:generate mockgen -package=auth -destination=mocks.go github.com/backforge-app/backforge/internal/transport/http/handler/auth Service
 package auth
 
 import (
 	"context"
 
-	"github.com/google/uuid"
-
-	"github.com/backforge-app/backforge/internal/service/auth"
+	serviceauth "github.com/backforge-app/backforge/internal/service/auth"
 )
 
-// Service defines the interface that HTTP handlers use to perform authentication operations.
+// Service defines the interface that HTTP handlers use to perform authentication
+// and identity management operations.
 type Service interface {
-	// LoginWithTelegram authenticates the user via Telegram login.
-	LoginWithTelegram(ctx context.Context, input auth.TelegramLoginInput) (accessToken, refreshToken string, err error)
+	// Register creates a new user account with the provided email and password,
+	// and triggers the dispatch of an email verification link.
+	Register(ctx context.Context, input serviceauth.RegisterInput) error
 
-	// Refresh exchanges a valid refresh token for new access and refresh tokens.
-	Refresh(ctx context.Context, refreshToken string) (accessToken, newRefreshToken string, err error)
+	// Login authenticates a user by verifying their email and password.
+	// It returns a short-lived access token and a long-lived refresh token on success.
+	Login(ctx context.Context, input serviceauth.LoginInput) (string, string, error)
 
-	// DevLogin issues tokens for an existing user without Telegram verification.
-	// Intended for development only.
-	DevLogin(ctx context.Context, userID uuid.UUID) (accessToken, refreshToken string, err error)
+	// VerifyEmail validates the provided secure token and updates the user's
+	// status to indicate that their email address has been successfully confirmed.
+	VerifyEmail(ctx context.Context, rawToken string) error
+
+	// RequestPasswordReset initiates the password recovery flow. It securely generates
+	// a reset token and sends it to the specified email address if the account exists.
+	RequestPasswordReset(ctx context.Context, email string) error
+
+	// ResetPassword validates the provided reset token and updates the user's password.
+	// It ensures the token is valid, unexpired, and strictly intended for password resets.
+	ResetPassword(ctx context.Context, rawToken, newPassword string) error
+
+	// LoginWithYandex handles the OAuth flow, linking existing accounts by email
+	// or creating new ones, then issuing tokens.
+	LoginWithYandex(ctx context.Context, code string) (string, string, error)
+
+	// Refresh consumes a valid, unrevoked refresh token to issue a fresh pair
+	// of access and refresh tokens, securely rotating the user's session.
+	Refresh(ctx context.Context, oldRawToken string) (string, string, error)
+
+	// ResendVerificationEmail invalidates old verification tokens and sends a fresh one.
+	ResendVerificationEmail(ctx context.Context, email string) error
 }

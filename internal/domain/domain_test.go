@@ -124,3 +124,101 @@ func TestTopic_Update(t *testing.T) {
 	assert.Equal(t, &adminID, topic.UpdatedBy)
 	assert.True(t, topic.UpdatedAt.After(before))
 }
+
+func TestUser_PasswordManagement(t *testing.T) {
+	t.Run("Set and Check Password Success", func(t *testing.T) {
+		u := &User{}
+		err := u.SetPassword("my_secure_password")
+
+		assert.NoError(t, err)
+		assert.NotNil(t, u.PasswordHash)
+		assert.True(t, u.HasPassword())
+
+		assert.True(t, u.CheckPassword("my_secure_password"))
+		assert.False(t, u.CheckPassword("wrong_password"))
+	})
+
+	t.Run("Password too long", func(t *testing.T) {
+		u := &User{}
+		longPassword := string(make([]byte, 73))
+
+		err := u.SetPassword(longPassword)
+
+		assert.ErrorIs(t, err, ErrPasswordTooLong)
+		assert.Nil(t, u.PasswordHash)
+		assert.False(t, u.HasPassword())
+	})
+
+	t.Run("CheckPassword without hash", func(t *testing.T) {
+		u := &User{PasswordHash: nil} // Имитация OAuth пользователя
+
+		assert.False(t, u.HasPassword())
+		assert.False(t, u.CheckPassword("any_password"))
+	})
+}
+
+func TestUser_Constructors(t *testing.T) {
+	t.Run("NewUserWithPassword", func(t *testing.T) {
+		firstName := "John"
+
+		u, err := NewUserWithPassword("test@example.com", "valid_pass", firstName, nil, nil, nil)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "test@example.com", u.Email)
+		assert.Equal(t, "John", u.FirstName)
+		assert.Equal(t, UserRoleUser, u.Role)
+		assert.False(t, u.IsEmailVerified)
+		assert.True(t, u.HasPassword())
+	})
+
+	t.Run("NewUserFromOAuth", func(t *testing.T) {
+		firstName := "OAuth"
+
+		u := NewUserFromOAuth("oauth@example.com", firstName, nil, nil, nil, true)
+
+		assert.Equal(t, "oauth@example.com", u.Email)
+		assert.Equal(t, "OAuth", u.FirstName)
+		assert.Equal(t, UserRoleUser, u.Role)
+		assert.True(t, u.IsEmailVerified)
+		assert.False(t, u.HasPassword())
+		assert.Nil(t, u.PasswordHash)
+	})
+}
+
+func TestVerificationToken(t *testing.T) {
+	t.Run("NewVerificationToken creates valid token and hash", func(t *testing.T) {
+		userID := uuid.New()
+		ttl := 1 * time.Hour
+
+		rawToken, entity, err := NewVerificationToken(userID, TokenPurposeEmailVerification, ttl)
+
+		assert.NoError(t, err)
+		assert.NotEmpty(t, rawToken)
+		assert.NotNil(t, entity)
+
+		expectedHash := HashVerificationToken(rawToken)
+		assert.Equal(t, expectedHash, entity.TokenHash)
+
+		assert.Equal(t, userID, entity.UserID)
+		assert.Equal(t, TokenPurposeEmailVerification, entity.Purpose)
+		assert.False(t, entity.IsExpired())
+	})
+
+	t.Run("IsExpired returns correct status", func(t *testing.T) {
+		expiredToken := &VerificationToken{ExpiresAt: time.Now().Add(-1 * time.Minute)}
+		assert.True(t, expiredToken.IsExpired())
+
+		validToken := &VerificationToken{ExpiresAt: time.Now().Add(1 * time.Minute)}
+		assert.False(t, validToken.IsExpired())
+	})
+
+	t.Run("HashVerificationToken is deterministic", func(t *testing.T) {
+		token := "my_secret_token_string"
+
+		hash1 := HashVerificationToken(token)
+		hash2 := HashVerificationToken(token)
+
+		assert.Equal(t, hash1, hash2, "Hashing the same token should produce the same output")
+		assert.NotEqual(t, token, hash1, "Hash should not equal the plain text token")
+	})
+}

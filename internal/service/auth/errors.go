@@ -1,29 +1,30 @@
-// Package auth implements authentication and session management logic.
-//
-// It supports Telegram-based authentication, JWT issuance, refresh token rotation,
-// session persistence, and revocation.
 package auth
 
 import "errors"
 
 var (
-	// ErrInvalidTelegramAuth is returned when Telegram authentication data
-	// fails validation (invalid hash, expired data, etc.).
-	ErrInvalidTelegramAuth = errors.New("invalid telegram auth data")
+	// ErrInvalidCredentials is returned when the email or password does not match.
+	// For security reasons, we do not specify which one is incorrect.
+	ErrInvalidCredentials = errors.New("invalid email or password")
 
-	// ErrTelegramAuthExpired is returned when the Telegram auth data is too old
-	// (auth_date is older than 24 hours), to prevent replay attacks.
-	ErrTelegramAuthExpired = errors.New("telegram auth data expired")
+	// ErrEmailNotVerified is returned when a user attempts to log in before verifying their email.
+	ErrEmailNotVerified = errors.New("email address is not verified")
 
-	// ErrRefreshTokenInvalid is returned when the refresh token is malformed,
-	// expired, or otherwise unusable.
+	// ErrInvalidVerificationToken is returned when a token is invalid, expired, or used for the wrong purpose.
+	ErrInvalidVerificationToken = errors.New("invalid or expired verification token")
+
+	// ErrOAuthExchangeFailed is returned when the service fails to exchange the OAuth code for a user profile.
+	ErrOAuthExchangeFailed = errors.New("failed to exchange oauth code")
+
+	// ErrRefreshTokenInvalid is returned when the refresh token is malformed, expired, or unrecognized.
 	ErrRefreshTokenInvalid = errors.New("invalid or expired refresh token")
 
-	// ErrRefreshTokenRevoked is returned when attempting to use a refresh token
-	// that has been explicitly revoked.
+	// ErrRefreshTokenRevoked is returned when attempting to use a refresh token that has been explicitly revoked.
 	ErrRefreshTokenRevoked = errors.New("refresh token revoked")
 
-	// ErrRefreshTokenAlreadyExists is returned when a newly generated refresh token
-	// collides with an existing token (extremely rare, but possible).
+	// ErrRefreshTokenAlreadyExists is returned on a highly improbable token collision.
 	ErrRefreshTokenAlreadyExists = errors.New("refresh token already exists")
+
+	// ErrEmailAlreadyVerified is returned when a user requests a verification link but is already verified.
+	ErrEmailAlreadyVerified = errors.New("user is already verified")
 )

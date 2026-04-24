@@ -1,4 +1,4 @@
-# === General ===
+# General
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -11,7 +11,7 @@ Desktop.ini
 *.swp
 *.swo
 
-# === IDE / Editors ===
+# IDE / Editors
 .vscode/*
 !.vscode/extensions.json
 .idea/
@@ -21,7 +21,7 @@ Desktop.ini
 *.njsproj
 *.sln
 
-# === Go (Backend) ===
+# Go (Backend)
 *.exe
 *.exe~
 *.dll
@@ -38,8 +38,7 @@ coverage.*
 profile.cov
 migrations/*.backup
 
-# === Node / Frontend (web directory) ===
-# Игнорируем зависимости и билды везде, включая подпапку web
+# Frontend (web directory)
 node_modules/
 web/node_modules/
 dist/
@@ -54,14 +53,14 @@ web/.tmp/
 web/.vite/
 .npm/
 
-# === Environment & Secrets ===
+# Environment & Secrets
 .env
 .env.local
 .env.*.local
 *.env.backup
 secrets.yaml
 
-# === Logs ===
+# Logs
 logs/
 *.log
 npm-debug.log*
@@ -70,6 +69,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# === Testing / Coverage ===
+# Testing / Coverage
 .nyc_output/
 .cache/

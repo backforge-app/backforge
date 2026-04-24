@@ -2,12 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"sort"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,318 +12,376 @@ import (
 
 	"github.com/backforge-app/backforge/internal/config"
 	"github.com/backforge-app/backforge/internal/domain"
+	oauthrepo "github.com/backforge-app/backforge/internal/repository/oauthconnection"
+	tokenrepo "github.com/backforge-app/backforge/internal/repository/verificationtoken"
+	"github.com/backforge-app/backforge/internal/service/user"
 )
 
-// makeValidTelegramInput creates a valid TelegramLoginInput with correct HMAC signature.
-// It includes all provided fields and sorts keys alphabetically.
-func makeValidTelegramInput(
-	botToken string,
-	id int64,
-	firstName string,
-	lastName *string,
-	username *string,
-	photoURL *string,
-) TelegramLoginInput {
-	authDate := time.Now().Unix()
-
-	var pairs []string
-	pairs = append(pairs, fmt.Sprintf("auth_date=%d", authDate))
-	pairs = append(pairs, fmt.Sprintf("id=%d", id))
-	if firstName != "" {
-		pairs = append(pairs, fmt.Sprintf("first_name=%s", firstName))
-	}
-	if lastName != nil {
-		pairs = append(pairs, fmt.Sprintf("last_name=%s", *lastName))
-	}
-	if username != nil {
-		pairs = append(pairs, fmt.Sprintf("username=%s", *username))
-	}
-	if photoURL != nil {
-		pairs = append(pairs, fmt.Sprintf("photo_url=%s", *photoURL))
-	}
-
-	sort.Strings(pairs)
-	dataCheckString := strings.Join(pairs, "\n")
-
-	secret := sha256.Sum256([]byte(botToken))
-	h := hmac.New(sha256.New, secret[:])
-	h.Write([]byte(dataCheckString))
-
-	return TelegramLoginInput{
-		ID:        id,
-		FirstName: firstName,
-		LastName:  lastName,
-		Username:  username,
-		PhotoURL:  photoURL,
-		AuthDate:  authDate,
-		Hash:      hex.EncodeToString(h.Sum(nil)),
-	}
+// setupTxMock is a helper to automatically execute the function passed to WithinTx.
+func setupTxMock(transactor *MockTransactor, ctx context.Context) {
+	transactor.EXPECT().
+		WithinTx(ctx, gomock.Any()).
+		DoAndReturn(func(_ context.Context, fn func(context.Context) error) error {
+			return fn(ctx)
+		}).AnyTimes()
 }
 
-func TestAuth_LoginWithTelegram(t *testing.T) {
+// makeUserWithPassword is a helper to create a domain user with a valid bcrypt password hash.
+func makeUserWithPassword(t *testing.T, id uuid.UUID, email, plainPassword string, isVerified bool) *domain.User {
+	u := &domain.User{
+		ID:              id,
+		Email:           email,
+		IsEmailVerified: isVerified,
+	}
+	err := u.SetPassword(plainPassword)
+	require.NoError(t, err)
+	return u
+}
+
+// ServiceMocks holds all mock dependencies for easy access in tests.
+type ServiceMocks struct {
+	User        *MockUserService
+	Session     *MockSessionRepository
+	OAuth       *MockOAuthConnectionRepository
+	Token       *MockVerificationTokenRepository
+	Tx          *MockTransactor
+	Email       *MockEmailSender
+	OAuthClient *MockOAuthClient // Заменили GitHub на универсальный OAuthClient
+}
+
+func setupService(ctrl *gomock.Controller) (*Service, ServiceMocks) {
+	m := ServiceMocks{
+		User:        NewMockUserService(ctrl),
+		Session:     NewMockSessionRepository(ctrl),
+		OAuth:       NewMockOAuthConnectionRepository(ctrl),
+		Token:       NewMockVerificationTokenRepository(ctrl),
+		Tx:          NewMockTransactor(ctrl),
+		Email:       NewMockEmailSender(ctrl),
+		OAuthClient: NewMockOAuthClient(ctrl), // Инициализация нового мока
+	}
+
+	cfg := &config.Auth{
+		Secret:               "test-secret",
+		AccessTokenTTL:       15 * time.Minute,
+		RefreshTokenTTL:      24 * time.Hour,
+		EmailVerificationTTL: 24 * time.Hour,
+		PasswordResetTTL:     1 * time.Hour,
+	}
+
+	svc := NewService(m.User, m.Session, m.OAuth, m.Token, m.Email, m.OAuthClient, m.Tx, cfg)
+	return svc, m
+}
+
+func TestService_Register(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUsers := NewMockUserProvider(ctrl)
-	mockRefresh := NewMockSessionRepository(ctrl)
-
-	authCfg := &config.Auth{
-		Secret:          "secret",
-		AccessTokenTTL:  time.Hour,
-		RefreshTokenTTL: 24 * time.Hour,
-	}
-
-	botToken := "bot-token"
-
-	svc := NewService(mockUsers, mockRefresh, nil, authCfg, botToken)
-
+	svc, m := setupService(ctrl)
 	ctx := context.Background()
-	tgID := int64(12345)
-	firstName := "John"
-	userID := uuid.New()
 
-	domainUser := &domain.User{
-		ID:         userID,
-		TelegramID: tgID,
-		FirstName:  firstName,
+	input := RegisterInput{
+		Email:     "test@example.com",
+		Password:  "securepassword",
+		FirstName: "John",
 	}
-
-	t.Run("Success - minimal input", func(t *testing.T) {
-		input := makeValidTelegramInput(botToken, tgID, firstName, nil, nil, nil)
-
-		mockUsers.EXPECT().
-			GetOrCreateByTelegramID(ctx, gomock.Any()).
-			Return(domainUser, nil)
-
-		mockRefresh.EXPECT().
-			Create(ctx, gomock.Any()).
-			Return(nil)
-
-		access, refresh, err := svc.LoginWithTelegram(ctx, input)
-		require.NoError(t, err)
-		require.NotEmpty(t, access)
-		require.NotEmpty(t, refresh)
-	})
-
-	t.Run("Success - with optional fields", func(t *testing.T) {
-		lastName := "Doe"
-		username := "john_doe"
-		photoURL := "https://t.me/i/userpic/320/abc.jpg"
-
-		input := makeValidTelegramInput(botToken, tgID, firstName, &lastName, &username, &photoURL)
-
-		mockUsers.EXPECT().
-			GetOrCreateByTelegramID(ctx, gomock.Any()).
-			Return(domainUser, nil)
-
-		mockRefresh.EXPECT().
-			Create(ctx, gomock.Any()).
-			Return(nil)
-
-		access, refresh, err := svc.LoginWithTelegram(ctx, input)
-		require.NoError(t, err)
-		require.NotEmpty(t, access)
-		require.NotEmpty(t, refresh)
-	})
-
-	t.Run("Fail - invalid hash", func(t *testing.T) {
-		input := makeValidTelegramInput(botToken, tgID, firstName, nil, nil, nil)
-		input.Hash = "wronghash123"
-
-		access, refresh, err := svc.LoginWithTelegram(ctx, input)
-		assert.ErrorIs(t, err, ErrInvalidTelegramAuth)
-		assert.Empty(t, access)
-		assert.Empty(t, refresh)
-	})
-
-	t.Run("Fail - expired auth date", func(t *testing.T) {
-		oldAuthDate := time.Now().Add(-30 * time.Hour).Unix()
-
-		var pairs []string
-		pairs = append(pairs, fmt.Sprintf("auth_date=%d", oldAuthDate))
-		pairs = append(pairs, fmt.Sprintf("id=%d", tgID))
-		if firstName != "" {
-			pairs = append(pairs, fmt.Sprintf("first_name=%s", firstName))
-		}
-		sort.Strings(pairs)
-		data := strings.Join(pairs, "\n")
-
-		secret := sha256.Sum256([]byte(botToken))
-		h := hmac.New(sha256.New, secret[:])
-		h.Write([]byte(data))
-
-		input := TelegramLoginInput{
-			ID:        tgID,
-			FirstName: firstName,
-			AuthDate:  oldAuthDate,
-			Hash:      hex.EncodeToString(h.Sum(nil)),
-		}
-
-		access, refresh, err := svc.LoginWithTelegram(ctx, input)
-		require.ErrorIs(t, err, ErrTelegramAuthExpired)
-		assert.Empty(t, access)
-		assert.Empty(t, refresh)
-	})
-
-	t.Run("Fail - user creation error", func(t *testing.T) {
-		input := makeValidTelegramInput(botToken, tgID, firstName, nil, nil, nil)
-
-		mockUsers.EXPECT().
-			GetOrCreateByTelegramID(ctx, gomock.Any()).
-			Return(nil, assert.AnError)
-
-		access, refresh, err := svc.LoginWithTelegram(ctx, input)
-		assert.Error(t, err)
-		assert.Empty(t, access)
-		assert.Empty(t, refresh)
-	})
-}
-
-func TestAuth_Refresh(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockUsers := NewMockUserProvider(ctrl)
-	mockRefresh := NewMockSessionRepository(ctrl)
-	mockTx := NewMockTransactor(ctrl)
-
-	authCfg := &config.Auth{
-		Secret:          "secret",
-		AccessTokenTTL:  time.Hour,
-		RefreshTokenTTL: 24 * time.Hour,
-	}
-
-	svc := NewService(mockUsers, mockRefresh, mockTx, authCfg, "bot-token")
-
-	ctx := context.Background()
-	userID := uuid.New()
-	oldToken := "old-token"
-	rt := &domain.Session{
-		TokenHash: hashToken(oldToken),
-		UserID:    userID,
-		ExpiresAt: time.Now().Add(time.Hour),
-		Revoked:   false,
-	}
-	domainUser := &domain.User{ID: userID}
 
 	t.Run("Success", func(t *testing.T) {
-		mockTx.EXPECT().WithinTx(ctx, gomock.Any()).DoAndReturn(
-			func(ctx context.Context, fn func(ctx context.Context) error) error {
-				return fn(ctx)
-			},
-		)
+		setupTxMock(m.Tx, ctx)
+		userID := uuid.New()
 
-		tokenHash := hashToken(oldToken)
+		m.User.EXPECT().CreateWithPassword(ctx, gomock.Any()).Return(userID, nil)
+		m.Token.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+		m.Email.EXPECT().SendVerificationEmail(ctx, input.Email, gomock.Any()).Return(nil)
 
-		mockRefresh.EXPECT().
-			GetByTokenHash(ctx, tokenHash).
-			Return(rt, nil)
+		err := svc.Register(ctx, input)
+		require.NoError(t, err)
+	})
 
-		mockUsers.EXPECT().
-			GetByID(ctx, userID).
-			Return(domainUser, nil)
+	t.Run("Fail - email taken", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
 
-		mockRefresh.EXPECT().
-			Revoke(ctx, tokenHash).
-			Return(nil)
+		m.User.EXPECT().CreateWithPassword(ctx, gomock.Any()).Return(uuid.Nil, user.ErrUserEmailTaken)
 
-		mockRefresh.EXPECT().
-			Create(ctx, gomock.Any()).
-			Return(nil)
+		err := svc.Register(ctx, input)
+		require.ErrorIs(t, err, user.ErrUserEmailTaken)
+	})
+}
 
-		access, refresh, err := svc.Refresh(ctx, oldToken)
+func TestService_VerifyEmail(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
+	svc, m := setupService(ctrl)
+	ctx := context.Background()
+	rawToken := "somerawtoken"
+	tokenHash := domain.HashVerificationToken(rawToken)
+
+	validToken := &domain.VerificationToken{
+		UserID: uuid.New(),
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+
+		m.Token.EXPECT().GetByHash(ctx, tokenHash, domain.TokenPurposeEmailVerification).Return(validToken, nil)
+		m.User.EXPECT().MarkEmailVerified(ctx, validToken.UserID).Return(nil)
+		m.Token.EXPECT().Delete(ctx, tokenHash).Return(nil)
+
+		err := svc.VerifyEmail(ctx, rawToken)
+		require.NoError(t, err)
+	})
+
+	t.Run("Fail - token not found", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+
+		m.Token.EXPECT().GetByHash(ctx, tokenHash, domain.TokenPurposeEmailVerification).Return(nil, tokenrepo.ErrTokenNotFound)
+
+		err := svc.VerifyEmail(ctx, rawToken)
+		require.ErrorIs(t, err, ErrInvalidVerificationToken)
+	})
+}
+
+func TestService_Login(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	svc, m := setupService(ctrl)
+	ctx := context.Background()
+
+	input := LoginInput{
+		Email:    "test@example.com",
+		Password: "correctpassword",
+	}
+	userID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		u := makeUserWithPassword(t, userID, input.Email, input.Password, true)
+
+		m.User.EXPECT().GetByEmail(ctx, input.Email).Return(u, nil)
+		m.Session.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+
+		access, refresh, err := svc.Login(ctx, input)
 		require.NoError(t, err)
 		assert.NotEmpty(t, access)
 		assert.NotEmpty(t, refresh)
 	})
 
-	t.Run("Fail_Revoked", func(t *testing.T) {
-		rtRevoked := *rt
-		rtRevoked.Revoked = true
+	t.Run("Fail - incorrect password", func(t *testing.T) {
+		u := makeUserWithPassword(t, userID, input.Email, "differentpassword", true)
 
-		mockTx.EXPECT().WithinTx(ctx, gomock.Any()).DoAndReturn(
-			func(ctx context.Context, fn func(ctx context.Context) error) error {
-				return fn(ctx)
-			},
-		)
-		mockRefresh.EXPECT().GetByTokenHash(ctx, hashToken(oldToken)).Return(&rtRevoked, nil)
+		m.User.EXPECT().GetByEmail(ctx, input.Email).Return(u, nil)
 
-		_, _, err := svc.Refresh(ctx, oldToken)
-		assert.ErrorIs(t, err, ErrRefreshTokenRevoked)
+		access, refresh, err := svc.Login(ctx, input)
+		require.ErrorIs(t, err, ErrInvalidCredentials)
+		assert.Empty(t, access)
+		assert.Empty(t, refresh)
 	})
 
-	t.Run("Fail_Expired", func(t *testing.T) {
-		rtExpired := *rt
-		rtExpired.ExpiresAt = time.Now().Add(-time.Hour)
+	t.Run("Fail - email not verified", func(t *testing.T) {
+		u := makeUserWithPassword(t, userID, input.Email, input.Password, false) // isVerified = false
 
-		mockTx.EXPECT().WithinTx(ctx, gomock.Any()).DoAndReturn(
-			func(ctx context.Context, fn func(ctx context.Context) error) error {
-				return fn(ctx)
-			},
-		)
-		mockRefresh.EXPECT().GetByTokenHash(ctx, hashToken(oldToken)).Return(&rtExpired, nil)
+		m.User.EXPECT().GetByEmail(ctx, input.Email).Return(u, nil)
 
-		_, _, err := svc.Refresh(ctx, oldToken)
-		assert.ErrorIs(t, err, ErrRefreshTokenInvalid)
+		access, refresh, err := svc.Login(ctx, input)
+		require.ErrorIs(t, err, ErrEmailNotVerified)
+		assert.Empty(t, access)
+		assert.Empty(t, refresh)
 	})
 }
 
-func TestAuth_validateTelegramAuth(t *testing.T) {
-	botToken := "test-bot-token" //nolint:gosec
-	svc := &Service{botToken: botToken}
+func TestService_RequestPasswordReset(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	t.Run("valid minimal input", func(t *testing.T) {
-		input := makeValidTelegramInput(botToken, 12345, "Alice", nil, nil, nil)
-		err := svc.validateTelegramAuth(input)
+	svc, m := setupService(ctrl)
+	ctx := context.Background()
+
+	email := "test@example.com"
+	u := &domain.User{ID: uuid.New(), Email: email}
+
+	t.Run("Success", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+
+		m.User.EXPECT().GetByEmail(ctx, email).Return(u, nil)
+		m.Token.EXPECT().DeleteAllForUser(ctx, u.ID, domain.TokenPurposePasswordReset).Return(nil)
+		m.Token.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+		m.Email.EXPECT().SendPasswordResetEmail(ctx, email, gomock.Any()).Return(nil)
+
+		err := svc.RequestPasswordReset(ctx, email)
 		require.NoError(t, err)
 	})
 
-	t.Run("valid with all optional fields", func(t *testing.T) {
-		last := "Smith"
-		user := "alice_smith"
-		photo := "https://t.me/i/userpic/320/abc.jpg"
-		input := makeValidTelegramInput(botToken, 12345, "Alice", &last, &user, &photo)
-		err := svc.validateTelegramAuth(input)
+	t.Run("Silent Success - user not found", func(t *testing.T) {
+		m.User.EXPECT().GetByEmail(ctx, email).Return(nil, user.ErrUserNotFound)
+
+		err := svc.RequestPasswordReset(ctx, email)
+		require.NoError(t, err) // Should silently succeed to prevent enumeration
+	})
+}
+
+func TestService_ResetPassword(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	svc, m := setupService(ctrl)
+	ctx := context.Background()
+
+	rawToken := "somerawtoken"
+	tokenHash := domain.HashVerificationToken(rawToken)
+	newPassword := "new_secure_password"
+
+	validToken := &domain.VerificationToken{
+		UserID: uuid.New(),
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+
+		m.Token.EXPECT().GetByHash(ctx, tokenHash, domain.TokenPurposePasswordReset).Return(validToken, nil)
+		m.User.EXPECT().SetNewPassword(ctx, validToken.UserID, newPassword).Return(nil)
+		m.Token.EXPECT().Delete(ctx, tokenHash).Return(nil)
+
+		err := svc.ResetPassword(ctx, rawToken, newPassword)
 		require.NoError(t, err)
 	})
+}
 
-	t.Run("invalid hash", func(t *testing.T) {
-		input := makeValidTelegramInput(botToken, 12345, "Bob", nil, nil, nil)
-		input.Hash = "wronghash123"
-		err := svc.validateTelegramAuth(input)
-		require.ErrorIs(t, err, ErrInvalidTelegramAuth)
+// Заменили GitHub на Yandex
+func TestService_LoginWithYandex(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	svc, m := setupService(ctrl)
+	ctx := context.Background()
+
+	code := "yandex_oauth_code"
+	profile := &OAuthProfile{ // Используем новую структуру OAuthProfile
+		ProviderID: "123456",
+		Email:      "yandex@example.com",
+		Name:       "Yandex User",
+		AvatarURL:  "https://avatar.yandex.net/test",
+	}
+
+	t.Run("Success - existing linked user", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+		userID := uuid.New()
+		u := &domain.User{ID: userID, Role: domain.UserRoleUser}
+
+		m.OAuthClient.EXPECT().ExchangeCode(ctx, code).Return(profile, nil)
+		m.OAuth.EXPECT().GetByProviderUserID(ctx, domain.OAuthProviderYandex, profile.ProviderID).Return(&domain.OAuthConnection{UserID: userID}, nil)
+		m.User.EXPECT().GetByID(ctx, userID).Return(u, nil)
+		m.Session.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+
+		access, refresh, err := svc.LoginWithYandex(ctx, code)
+		require.NoError(t, err)
+		assert.NotEmpty(t, access)
+		assert.NotEmpty(t, refresh)
 	})
 
-	t.Run("expired auth_date", func(t *testing.T) {
-		oldDate := time.Now().Add(-30 * time.Hour).Unix()
+	t.Run("Success - new user creation", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+		newUserID := uuid.New()
+		newUser := &domain.User{ID: newUserID, Role: domain.UserRoleUser}
 
-		// Correctly compute the hash for this old date
-		var pairs []string
-		pairs = append(pairs, fmt.Sprintf("auth_date=%d", oldDate))
-		pairs = append(pairs, fmt.Sprintf("id=%d", 999))
-		pairs = append(pairs, fmt.Sprintf("first_name=%s", "Test"))
-		sort.Strings(pairs)
-		data := strings.Join(pairs, "\n")
+		m.OAuthClient.EXPECT().ExchangeCode(ctx, code).Return(profile, nil)
+		m.OAuth.EXPECT().GetByProviderUserID(ctx, domain.OAuthProviderYandex, profile.ProviderID).Return(nil, oauthrepo.ErrConnectionNotFound)
+		m.User.EXPECT().GetByEmail(ctx, profile.Email).Return(nil, user.ErrUserNotFound)
+		m.User.EXPECT().CreateOAuthUser(ctx, gomock.Any()).Return(newUserID, nil)
+		m.User.EXPECT().GetByID(ctx, newUserID).Return(newUser, nil)
+		m.OAuth.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+		m.Session.EXPECT().Create(ctx, gomock.Any()).Return(nil)
 
-		secret := sha256.Sum256([]byte(botToken))
-		h := hmac.New(sha256.New, secret[:])
-		h.Write([]byte(data))
+		access, refresh, err := svc.LoginWithYandex(ctx, code)
+		require.NoError(t, err)
+		assert.NotEmpty(t, access)
+		assert.NotEmpty(t, refresh)
+	})
+}
 
-		input := TelegramLoginInput{
-			ID:        999,
-			FirstName: "Test",
-			AuthDate:  oldDate,
-			Hash:      hex.EncodeToString(h.Sum(nil)),
+func TestService_Refresh(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	svc, m := setupService(ctrl)
+	ctx := context.Background()
+
+	oldToken := "old_refresh_token"
+	hashed := hashToken(oldToken)
+	userID := uuid.New()
+	u := &domain.User{ID: userID, Role: domain.UserRoleUser}
+
+	t.Run("Success", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+
+		validSession := &domain.Session{
+			UserID:    userID,
+			ExpiresAt: time.Now().Add(time.Hour),
+			Revoked:   false,
 		}
 
-		err := svc.validateTelegramAuth(input)
-		require.ErrorIs(t, err, ErrTelegramAuthExpired)
+		m.Session.EXPECT().GetByTokenHash(ctx, hashed).Return(validSession, nil)
+		m.User.EXPECT().GetByID(ctx, userID).Return(u, nil)
+		m.Session.EXPECT().Revoke(ctx, hashed).Return(nil)
+		m.Session.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+
+		access, refresh, err := svc.Refresh(ctx, oldToken)
+		require.NoError(t, err)
+		assert.NotEmpty(t, access)
+		assert.NotEmpty(t, refresh)
 	})
 
-	t.Run("empty first_name is allowed (Telegram can send empty)", func(t *testing.T) {
-		input := makeValidTelegramInput(botToken, 12345, "", nil, nil, nil)
-		err := svc.validateTelegramAuth(input)
-		require.NoError(t, err) // should pass, as field is omitted in data-check-string
+	t.Run("Fail - revoked token", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+
+		revokedSession := &domain.Session{
+			UserID:    userID,
+			ExpiresAt: time.Now().Add(time.Hour),
+			Revoked:   true,
+		}
+
+		m.Session.EXPECT().GetByTokenHash(ctx, hashed).Return(revokedSession, nil)
+
+		access, refresh, err := svc.Refresh(ctx, oldToken)
+		require.ErrorIs(t, err, ErrRefreshTokenRevoked)
+		assert.Empty(t, access)
+		assert.Empty(t, refresh)
+	})
+}
+
+func TestService_ResendVerificationEmail(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	svc, m := setupService(ctrl)
+	ctx := context.Background()
+
+	email := "test@example.com"
+	u := &domain.User{ID: uuid.New(), Email: email, IsEmailVerified: false}
+
+	t.Run("Success", func(t *testing.T) {
+		setupTxMock(m.Tx, ctx)
+
+		m.User.EXPECT().GetByEmail(ctx, email).Return(u, nil)
+		m.Token.EXPECT().DeleteAllForUser(ctx, u.ID, domain.TokenPurposeEmailVerification).Return(nil)
+		m.Token.EXPECT().Create(ctx, gomock.Any()).Return(nil)
+		m.Email.EXPECT().SendVerificationEmail(ctx, email, gomock.Any()).Return(nil)
+
+		err := svc.ResendVerificationEmail(ctx, email)
+		require.NoError(t, err)
+	})
+
+	t.Run("Silent Success - user not found", func(t *testing.T) {
+		m.User.EXPECT().GetByEmail(ctx, email).Return(nil, user.ErrUserNotFound)
+
+		err := svc.ResendVerificationEmail(ctx, email)
+		require.NoError(t, err) // Should silently succeed to prevent enumeration
+	})
+
+	t.Run("Fail - already verified", func(t *testing.T) {
+		verifiedUser := &domain.User{ID: uuid.New(), Email: email, IsEmailVerified: true}
+		m.User.EXPECT().GetByEmail(ctx, email).Return(verifiedUser, nil)
+
+		err := svc.ResendVerificationEmail(ctx, email)
+		require.ErrorIs(t, err, ErrEmailAlreadyVerified)
 	})
 }

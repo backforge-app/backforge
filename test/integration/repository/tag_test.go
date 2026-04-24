@@ -71,8 +71,10 @@ func (s *TagRepoTestSuite) TearDownSuite() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	if err := s.pgCont.Terminate(s.ctx); err != nil {
-		log.Fatalf("failed to terminate container: %v", err)
+	if s.pgCont != nil {
+		if err := s.pgCont.Terminate(s.ctx); err != nil {
+			log.Fatalf("failed to terminate container: %v", err)
+		}
 	}
 }
 
@@ -163,9 +165,10 @@ func (s *TagRepoTestSuite) applyMigrations(dbURL string) {
 
 func (s *TagRepoTestSuite) createBaseFixtures() {
 	s.testUserID = uuid.New()
+
 	_, err := s.pool.Exec(s.ctx, `
-		INSERT INTO users (id, telegram_id, username, first_name) 
-		VALUES ($1, 555444, 'tag_admin', 'TagAdmin')
+		INSERT INTO users (id, email, username, first_name) 
+		VALUES ($1, 'tag_admin@example.com', 'tag_admin', 'TagAdmin')
 	`, s.testUserID)
 	s.Require().NoError(err)
 }

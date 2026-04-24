@@ -17,12 +17,23 @@ rate_limit:
     limit: 1.0
     burst: 3
 
-telegram:
-  debug: true
-
 auth:
   access_token_ttl: "30m"
-  refresh_token_ttl: "168h"     # 7 days
+  refresh_token_ttl: "168h"         # 7 days
+  email_verification_ttl: "24h"     # 1 day
+  password_reset_ttl: "1h"          # 1 hour
+
+oauth:
+  yandex:
+    client_id: ""                   # Set via ENV
+    client_secret: ""               # Set via ENV
+
+smtp:
+  host: "smtp.example.com"
+  port: 587
+  username: ""                      # Set via ENV
+  password: ""                      # Set via ENV
+  from_address: "noreply@backforge.tech"
 
 postgres:
   connection_url: ""

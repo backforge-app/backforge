@@ -68,8 +68,10 @@ func (s *UserRepoTestSuite) TearDownSuite() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	if err := s.pgCont.Terminate(s.ctx); err != nil {
-		log.Fatalf("failed to terminate container: %v", err)
+	if s.pgCont != nil {
+		if err := s.pgCont.Terminate(s.ctx); err != nil {
+			log.Fatalf("failed to terminate container: %v", err)
+		}
 	}
 }
 
@@ -80,11 +82,13 @@ func (s *UserRepoTestSuite) SetupTest() {
 
 func (s *UserRepoTestSuite) TestCreateAndGet() {
 	u := &domain.User{
-		TelegramID: 111222333,
-		FirstName:  "John",
-		LastName:   ptr("Doe"),
-		Username:   ptr("johndoe"),
-		Role:       domain.UserRoleUser,
+		Email:           "johndoe@example.com",
+		PasswordHash:    ptr("hashed_secure_password"),
+		IsEmailVerified: true,
+		FirstName:       "John",
+		LastName:        ptr("Doe"),
+		Username:        ptr("johndoe"),
+		Role:            domain.UserRoleUser,
 	}
 
 	id, err := s.repo.Create(s.ctx, u)
@@ -94,7 +98,9 @@ func (s *UserRepoTestSuite) TestCreateAndGet() {
 	fetchedByID, err := s.repo.GetByID(s.ctx, id)
 	s.Require().NoError(err)
 	s.Equal(id, fetchedByID.ID)
-	s.Equal(u.TelegramID, fetchedByID.TelegramID)
+	s.Equal(u.Email, fetchedByID.Email)
+	s.Equal(u.PasswordHash, fetchedByID.PasswordHash)
+	s.Equal(u.IsEmailVerified, fetchedByID.IsEmailVerified)
 	s.Equal(u.FirstName, fetchedByID.FirstName)
 
 	s.Require().NotNil(fetchedByID.LastName)
@@ -105,33 +111,39 @@ func (s *UserRepoTestSuite) TestCreateAndGet() {
 
 	s.Equal(domain.UserRoleUser, fetchedByID.Role)
 
-	fetchedByTG, err := s.repo.GetByTelegramID(s.ctx, u.TelegramID)
+	fetchedByEmail, err := s.repo.GetByEmail(s.ctx, u.Email)
 	s.Require().NoError(err)
-	s.Equal(id, fetchedByTG.ID)
+	s.Equal(id, fetchedByEmail.ID)
 }
 
 func (s *UserRepoTestSuite) TestUpdate() {
 	u := &domain.User{
-		TelegramID: 444555666,
-		FirstName:  "OldName",
-		Username:   ptr("old_nick"),
-		Role:       domain.UserRoleUser,
+		Email:           "old@example.com",
+		PasswordHash:    ptr("hash"),
+		FirstName:       "OldName",
+		Username:        ptr("old_nick"),
+		Role:            domain.UserRoleUser,
+		IsEmailVerified: false,
 	}
 
 	id, err := s.repo.Create(s.ctx, u)
 	s.Require().NoError(err)
 
 	u.ID = id
+	u.Email = "new@example.com"
 	u.FirstName = "NewName"
 	u.Username = ptr("new_nick")
 	u.Role = domain.UserRoleAdmin
+	u.IsEmailVerified = true
 
 	err = s.repo.Update(s.ctx, u)
 	s.Require().NoError(err)
 
 	updated, err := s.repo.GetByID(s.ctx, id)
 	s.Require().NoError(err)
+	s.Equal("new@example.com", updated.Email)
 	s.Equal("NewName", updated.FirstName)
+	s.True(updated.IsEmailVerified)
 
 	s.Require().NotNil(updated.Username)
 	s.Equal("new_nick", *updated.Username)
@@ -140,16 +152,16 @@ func (s *UserRepoTestSuite) TestUpdate() {
 
 func (s *UserRepoTestSuite) TestIsAdmin() {
 	adminID, err := s.repo.Create(s.ctx, &domain.User{
-		TelegramID: 100,
-		FirstName:  "Admin",
-		Role:       domain.UserRoleAdmin,
+		Email:     "admin@example.com",
+		FirstName: "Admin",
+		Role:      domain.UserRoleAdmin,
 	})
 	s.Require().NoError(err)
 
 	userID, err := s.repo.Create(s.ctx, &domain.User{
-		TelegramID: 200,
-		FirstName:  "User",
-		Role:       domain.UserRoleUser,
+		Email:     "user@example.com",
+		FirstName: "User",
+		Role:      domain.UserRoleUser,
 	})
 	s.Require().NoError(err)
 

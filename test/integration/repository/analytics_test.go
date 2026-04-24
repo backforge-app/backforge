@@ -63,6 +63,7 @@ func (s *AnalyticsRepoTestSuite) SetupSuite() {
 	pool, err := pgxpool.New(s.ctx, connString)
 	s.Require().NoError(err)
 	s.pool = pool
+
 	s.repo = analytics.NewRepository(s.pool)
 
 	s.createBaseFixtures()
@@ -72,7 +73,9 @@ func (s *AnalyticsRepoTestSuite) TearDownSuite() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	_ = s.pgCont.Terminate(s.ctx)
+	if s.pgCont != nil {
+		_ = s.pgCont.Terminate(s.ctx)
+	}
 }
 
 func (s *AnalyticsRepoTestSuite) SetupTest() {
@@ -119,13 +122,17 @@ func (s *AnalyticsRepoTestSuite) setProgress(uID, qID uuid.UUID, status domain.P
 
 func (s *AnalyticsRepoTestSuite) getQuestionID(idx int) uuid.UUID {
 	var ids []uuid.UUID
-	rows, _ := s.pool.Query(s.ctx, "SELECT id FROM questions ORDER BY slug")
+	rows, err := s.pool.Query(s.ctx, "SELECT id FROM questions ORDER BY slug")
+	s.Require().NoError(err)
 	defer rows.Close()
+
 	for rows.Next() {
 		var id uuid.UUID
-		rows.Scan(&id)
+		err := rows.Scan(&id)
+		s.Require().NoError(err)
 		ids = append(ids, id)
 	}
+	s.Require().NoError(rows.Err())
 	return ids[idx]
 }
 
@@ -133,24 +140,37 @@ func (s *AnalyticsRepoTestSuite) applyMigrations(dbURL string) {
 	db, err := sql.Open("pgx", dbURL)
 	s.Require().NoError(err)
 	defer db.Close()
+
 	_, b, _, _ := runtime.Caller(0)
 	projectRoot := filepath.Join(filepath.Dir(b), "../../..")
 	migrationsPath := filepath.Join(projectRoot, "migrations")
+
 	goose.SetDialect("postgres")
-	_ = goose.Up(db, migrationsPath)
+	err = goose.Up(db, migrationsPath)
+	s.Require().NoError(err)
 }
 
 func (s *AnalyticsRepoTestSuite) createBaseFixtures() {
 	s.testUserID = uuid.New()
 	s.testTopicID = uuid.New()
 
-	_, _ = s.pool.Exec(s.ctx, `INSERT INTO users (id, telegram_id, first_name) VALUES ($1, 101, 'Analytic')`, s.testUserID)
-	_, _ = s.pool.Exec(s.ctx, `INSERT INTO topics (id, title, slug) VALUES ($1, 'Go', 'go')`, s.testTopicID)
+	_, err := s.pool.Exec(s.ctx, `
+		INSERT INTO users (id, email, first_name) 
+		VALUES ($1, 'analytics_test@example.com', 'Analytic')
+	`, s.testUserID)
+	s.Require().NoError(err)
+
+	_, err = s.pool.Exec(s.ctx, `
+		INSERT INTO topics (id, title, slug) 
+		VALUES ($1, 'Go', 'go')
+	`, s.testTopicID)
+	s.Require().NoError(err)
 
 	for i := 1; i <= 3; i++ {
-		_, _ = s.pool.Exec(s.ctx, `
+		_, err = s.pool.Exec(s.ctx, `
 			INSERT INTO questions (id, title, slug, content, level, topic_id, created_by, updated_by)
 			VALUES ($1, $2, $3, '{}', 0, $4, $5, $5)
 		`, uuid.New(), fmt.Sprintf("Q%d", i), fmt.Sprintf("q-%d", i), s.testTopicID, s.testUserID)
+		s.Require().NoError(err)
 	}
 }

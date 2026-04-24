@@ -1,6 +1,3 @@
-// Package http provides the HTTP transport layer for the Backforge API.
-// It contains the router, middleware, handlers, and HTTP server lifecycle
-// management responsible for serving the API over HTTP.
 package http
 
 import (
@@ -65,7 +62,7 @@ func NewRouter(
 	}
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{cfg.Client.URL},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -74,8 +71,9 @@ func NewRouter(
 	}))
 
 	r.Route("/api/v1", func(r chi.Router) {
-		// Auth Routes.
+		// Auth Routes (Public).
 		r.Route("/auth", func(r chi.Router) {
+			// Apply stricter rate limiting to auth endpoints to prevent brute-force attacks.
 			if cfg.RateLimit.Enabled {
 				r.Use(mw.RateLimiter(
 					log,
@@ -85,13 +83,14 @@ func NewRouter(
 				))
 			}
 
+			r.Post("/register", handlers.Auth.Register)
 			r.Post("/login", handlers.Auth.Login)
+			r.Post("/verify-email", handlers.Auth.VerifyEmail)
+			r.Post("/forgot-password", handlers.Auth.RequestPasswordReset)
+			r.Post("/reset-password", handlers.Auth.ResetPassword)
+			r.Post("/yandex/callback", handlers.Auth.YandexCallback)
 			r.Post("/refresh", handlers.Auth.Refresh)
-
-			// DEV ONLY
-			if cfg.Env == "development" {
-				r.Post("/dev-login", handlers.Auth.DevLogin)
-			}
+			r.Post("/resend-verification", handlers.Auth.ResendVerification)
 		})
 
 		// Public Discovery Routes (No Auth Required).
@@ -118,6 +117,7 @@ func NewRouter(
 		// User profile.
 		protected.Route("/users", func(r chi.Router) {
 			r.Get("/me", handlers.User.GetProfile)
+			r.Patch("/me", handlers.User.UpdateProfile)
 		})
 
 		// Question & Topic exploration.

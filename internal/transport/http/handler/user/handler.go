@@ -63,13 +63,83 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleError maps service-level errors to HTTP responses for user operations.
+// UpdateProfile godoc
+// @Summary Update user profile
+// @Description Updates the authenticated user's mutable fields (e.g., name, username, photo)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body updateProfileRequest true "Profile update payload"
+// @Success 200 {object} render.Message "Profile updated successfully"
+// @Failure 400 {object} render.Error "Validation failed or invalid JSON"
+// @Failure 401 {object} render.Error "Unauthorized"
+// @Failure 409 {object} render.Error "Username already taken"
+// @Failure 500 {object} render.Error "Internal server error"
+// @Router /users/me [patch]
+//
+// UpdateProfile handles PATCH /users/me requests.
+func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, ok := middleware.UserIDFromContext(ctx)
+	if !ok {
+		h.log.Warn("unauthorized access attempt to update profile")
+		if sendErr := render.Fail(w, http.StatusUnauthorized, ErrUnauthorized); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send unauthorized response")
+		}
+		return
+	}
+
+	var req updateProfileRequest
+	if err := render.Decode(r, &req); err != nil {
+		// If Decode fails due to validation rules, render.ValidationErrors will extract them.
+		validationErrs := render.ValidationErrors(err)
+		if len(validationErrs) > 0 {
+			if sendErr := render.FailWithDetails(w, http.StatusBadRequest, "validation failed", validationErrs); sendErr != nil {
+				h.log.With(zap.Error(sendErr)).Warn("failed to send validation error response")
+			}
+			return
+		}
+
+		h.log.With(zap.Error(err)).Warn("failed to decode update profile request")
+		if sendErr := render.FailMessage(w, http.StatusBadRequest, "invalid request body"); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send bad request response")
+		}
+		return
+	}
+
+	input := serviceuser.UpdateInput{
+		ID:        userID,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Username:  req.Username,
+		PhotoURL:  req.PhotoURL,
+	}
+
+	if err := h.service.Update(ctx, input); err != nil {
+		h.handleError(w, err, "update profile")
+		return
+	}
+
+	if sendErr := render.Msg(w, "profile updated successfully"); sendErr != nil {
+		h.log.With(zap.Error(sendErr)).Warn("failed to send profile update response")
+	}
+}
+
+// handleError maps service-level errors to appropriate HTTP responses.
 func (h *Handler) handleError(w http.ResponseWriter, err error, action string) {
 	switch {
 	case errors.Is(err, serviceuser.ErrUserNotFound):
 		h.log.Warn("user not found")
 		if sendErr := render.Fail(w, http.StatusNotFound, ErrUserNotFound); sendErr != nil {
 			h.log.With(zap.Error(sendErr)).Warn("failed to send not found response")
+		}
+
+	case errors.Is(err, serviceuser.ErrUserUsernameTaken):
+		h.log.Warn("username conflict during update")
+		if sendErr := render.Fail(w, http.StatusConflict, ErrUsernameTaken); sendErr != nil {
+			h.log.With(zap.Error(sendErr)).Warn("failed to send conflict response")
 		}
 
 	default:
