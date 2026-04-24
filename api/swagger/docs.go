@@ -495,9 +495,95 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/auth/refresh": {
+        "/auth/forgot-password": {
             "post": {
-                "description": "Exchange a refresh token for a new access token",
+                "description": "Sends a password reset link to the provided email if it exists",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Request password reset email",
+                "parameters": [
+                    {
+                        "description": "Email payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.requestResetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "If the email is registered, a reset link has been sent",
+                        "schema": {
+                            "$ref": "#/definitions/render.Message"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates a user and returns access and refresh tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login using email and password",
+                "parameters": [
+                    {
+                        "description": "Login payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.loginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.tokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials or unverified email",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Exchange a valid refresh token for a new pair of access and refresh tokens",
                 "consumes": [
                     "application/json"
                 ],
@@ -511,7 +597,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Refresh token payload",
-                        "name": "refresh",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -521,19 +607,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "New access and refresh tokens",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/auth.refreshResponse"
+                            "$ref": "#/definitions/auth.tokenResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/render.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Invalid or revoked token",
                         "schema": {
                             "$ref": "#/definitions/render.Error"
                         }
@@ -541,9 +621,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login": {
+        "/auth/register": {
             "post": {
-                "description": "Login endpoint for Telegram auth",
+                "description": "Registers a new user and sends an email verification link",
                 "consumes": [
                     "application/json"
                 ],
@@ -553,15 +633,193 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Login using Telegram",
+                "summary": "Register a new user",
                 "parameters": [
                     {
-                        "description": "Login payload",
-                        "name": "login",
+                        "description": "Registration payload",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/auth.loginRequest"
+                            "$ref": "#/definitions/auth.registerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Registration successful. Please check your email.",
+                        "schema": {
+                            "$ref": "#/definitions/render.Message"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Email or Username already taken",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/resend-verification": {
+            "post": {
+                "description": "Sends a new email verification link if the account exists and is not yet verified",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Resend verification email",
+                "parameters": [
+                    {
+                        "description": "Email payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.resendVerificationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "If the account exists and needs verification, an email has been sent",
+                        "schema": {
+                            "$ref": "#/definitions/render.Message"
+                        }
+                    },
+                    "400": {
+                        "description": "Email is already verified",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "description": "Sets a new password using a valid reset token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Set a new password",
+                "parameters": [
+                    {
+                        "description": "Token and new password payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.resetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password reset successfully",
+                        "schema": {
+                            "$ref": "#/definitions/render.Message"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired token",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify-email": {
+            "post": {
+                "description": "Verifies a user's email using the token sent to their inbox",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify user email",
+                "parameters": [
+                    {
+                        "description": "Verification token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.verifyEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email verified successfully",
+                        "schema": {
+                            "$ref": "#/definitions/render.Message"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired token",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/yandex/callback": {
+            "post": {
+                "description": "Exchanges Yandex authorization code for JWT tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Yandex OAuth Callback",
+                "parameters": [
+                    {
+                        "description": "Yandex code payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.yandexCallbackRequest"
                         }
                     }
                 ],
@@ -569,23 +827,11 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/auth.loginResponse"
+                            "$ref": "#/definitions/auth.tokenResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/render.Error"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/render.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "Invalid code or OAuth failure",
                         "schema": {
                             "$ref": "#/definitions/render.Error"
                         }
@@ -1342,6 +1588,67 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the authenticated user's mutable fields (e.g., name, username, photo)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user profile",
+                "parameters": [
+                    {
+                        "description": "Profile update payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.updateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/render.Message"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed or invalid JSON",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Username already taken",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/render.Error"
+                        }
+                    }
+                }
             }
         }
     },
@@ -1386,51 +1693,14 @@ const docTemplate = `{
         "auth.loginRequest": {
             "type": "object",
             "required": [
-                "auth_date",
-                "first_name",
-                "hash",
-                "id"
+                "email",
+                "password"
             ],
             "properties": {
-                "auth_date": {
-                    "description": "Authorization timestamp",
-                    "type": "integer"
-                },
-                "first_name": {
-                    "description": "First name",
+                "email": {
                     "type": "string"
                 },
-                "hash": {
-                    "description": "Telegram login hash",
-                    "type": "string"
-                },
-                "id": {
-                    "description": "Telegram user ID",
-                    "type": "integer"
-                },
-                "last_name": {
-                    "description": "Last name (optional)",
-                    "type": "string"
-                },
-                "photo_url": {
-                    "description": "Avatar URL (optional)",
-                    "type": "string"
-                },
-                "username": {
-                    "description": "Telegram username (optional)",
-                    "type": "string"
-                }
-            }
-        },
-        "auth.loginResponse": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "description": "JWT token",
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "description": "Refresh token",
+                "password": {
                     "type": "string"
                 }
             }
@@ -1442,20 +1712,111 @@ const docTemplate = `{
             ],
             "properties": {
                 "refresh_token": {
-                    "description": "Existing refresh token",
                     "type": "string"
                 }
             }
         },
-        "auth.refreshResponse": {
+        "auth.registerRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "first_name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 2
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 2
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 8
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 3
+                }
+            }
+        },
+        "auth.requestResetRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.resendVerificationRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.resetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password",
+                "token"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 8
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.tokenResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
-                    "description": "New JWT token",
                     "type": "string"
                 },
                 "refresh_token": {
-                    "description": "New refresh token",
+                    "type": "string"
+                }
+            }
+        },
+        "auth.verifyEmailRequest": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.yandexCallbackRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
                     "type": "string"
                 }
             }
@@ -1716,6 +2077,14 @@ const docTemplate = `{
                 }
             }
         },
+        "render.Message": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "tag.createRequest": {
             "type": "object",
             "required": [
@@ -1847,14 +2216,46 @@ const docTemplate = `{
                 }
             }
         },
-        "user.userResponse": {
+        "user.updateProfileRequest": {
             "type": "object",
             "properties": {
                 "first_name": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 2
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 2
+                },
+                "photo_url": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 3
+                }
+            }
+        },
+        "user.userResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "has_password": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_email_verified": {
+                    "type": "boolean"
                 },
                 "last_name": {
                     "type": "string"
@@ -1864,9 +2265,6 @@ const docTemplate = `{
                 },
                 "role": {
                     "type": "string"
-                },
-                "telegram_id": {
-                    "type": "integer"
                 },
                 "username": {
                     "type": "string"

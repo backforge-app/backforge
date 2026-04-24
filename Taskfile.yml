@@ -69,11 +69,27 @@ tasks:
     cmds:
       - "{{.GO}} test ./..."
 
+  test-integration:
+    desc: Run integration tests
+    cmds:
+      - "{{.GO}} test -v -tags=integration ./test/integration/..."
+
   build:
     desc: Build server binary locally
     cmds:
       - mkdir -p bin
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 {{.GO}} build -o bin/server ./cmd/server
+
+  # Generation
+  swagger:
+    desc: Generate Swagger documentation
+    cmds:
+      - swag init -g cmd/server/main.go -o api/swagger
+
+  mocks:
+    desc: Generate Go mocks using go generate
+    cmds:
+      - "{{.GO}} generate ./..."
 
   # Linting
   lint:
