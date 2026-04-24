@@ -48,34 +48,27 @@ func New(cfg Config) *Mailer {
 // during the SMTP transmission.
 func (m *Mailer) SendHTML(ctx context.Context, to, subject, htmlBody string) error {
 	// 1. Sanitize inputs to prevent Email Header Injection (CRLF Injection).
-	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(m.cfg.FromAddress, "\r\n") {
+	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(m.cfg.FromAddress, "\r\n") || strings.ContainsAny(subject, "\r\n") {
 		return ErrCRLFInjection
 	}
 
-	// 2. Validate email address syntax for recipient and sender.
-	// This ensures the strings conform to RFC 5322 and clears CodeQL taint tracking.
-	if _, err := mail.ParseAddress(to); err != nil {
+	// 2. Validate and canonicalize email address syntax for recipient and sender.
+	parsedTo, err := mail.ParseAddress(to)
+	if err != nil {
 		return ErrInvalidEmailAddress
 	}
-	if _, err := mail.ParseAddress(m.cfg.FromAddress); err != nil {
+	parsedFrom, err := mail.ParseAddress(m.cfg.FromAddress)
+	if err != nil {
 		return ErrInvalidEmailAddress
 	}
 
-	// 3. Construct standard MIME headers for HTML email.
-	headers := make(map[string]string)
-	headers["From"] = m.cfg.FromAddress
-	headers["To"] = to
-
-	// Safely encode the subject to handle Unicode and prevent CRLF.
-	headers["Subject"] = mime.QEncoding.Encode("utf-8", subject)
-
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
-
+	// 3. Construct standard MIME headers for HTML email using sanitized values.
 	var msgBuilder strings.Builder
-	for k, v := range headers {
-		msgBuilder.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
-	}
+	msgBuilder.WriteString(fmt.Sprintf("From: %s\r\n", parsedFrom.String()))
+	msgBuilder.WriteString(fmt.Sprintf("To: %s\r\n", parsedTo.String()))
+	msgBuilder.WriteString(fmt.Sprintf("Subject: %s\r\n", mime.QEncoding.Encode("utf-8", subject)))
+	msgBuilder.WriteString("MIME-Version: 1.0\r\n")
+	msgBuilder.WriteString("Content-Type: text/html; charset=\"UTF-8\"\r\n")
 
 	// A blank line separates headers from the body in standard SMTP.
 	msgBuilder.WriteString("\r\n")
@@ -88,7 +81,7 @@ func (m *Mailer) SendHTML(ctx context.Context, to, subject, htmlBody string) err
 	// 4. Execute sending in a goroutine to support context cancellation.
 	ch := make(chan error, 1)
 	go func() {
-		ch <- smtp.SendMail(addr, auth, m.cfg.FromAddress, []string{to}, msg)
+		ch <- smtp.SendMail(addr, auth, parsedFrom.Address, []string{parsedTo.Address}, msg)
 	}()
 
 	select {
