@@ -74,8 +74,10 @@ func (s *QuestionTagRepoTestSuite) TearDownSuite() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	if err := s.pgCont.Terminate(s.ctx); err != nil {
-		log.Fatalf("failed to terminate container: %v", err)
+	if s.pgCont != nil {
+		if err := s.pgCont.Terminate(s.ctx); err != nil {
+			log.Fatalf("failed to terminate container: %v", err)
+		}
 	}
 }
 
@@ -141,7 +143,10 @@ func (s *QuestionTagRepoTestSuite) createBaseFixtures() {
 	s.testTopicID = uuid.New()
 	s.testQID = uuid.New()
 
-	_, err := s.pool.Exec(s.ctx, `INSERT INTO users (id, telegram_id, first_name) VALUES ($1, 777, 'Admin')`, s.testUserID)
+	_, err := s.pool.Exec(s.ctx, `
+		INSERT INTO users (id, email, first_name) 
+		VALUES ($1, 'qtag_test@example.com', 'Admin')
+	`, s.testUserID)
 	s.Require().NoError(err)
 
 	_, err = s.pool.Exec(s.ctx, `INSERT INTO topics (id, title, slug) VALUES ($1, 'T', 't')`, s.testTopicID)
@@ -155,8 +160,8 @@ func (s *QuestionTagRepoTestSuite) createBaseFixtures() {
 
 	s.testTagIDs = []uuid.UUID{uuid.New(), uuid.New()}
 	_, err = s.pool.Exec(s.ctx, `
-        INSERT INTO tags (id, name, created_by) 
-        VALUES ($1, 'SQL', $3), ($2, 'Go', $3)
-    `, s.testTagIDs[0], s.testTagIDs[1], s.testUserID)
+		INSERT INTO tags (id, name, created_by) 
+		VALUES ($1, 'SQL', $3), ($2, 'Go', $3)
+	`, s.testTagIDs[0], s.testTagIDs[1], s.testUserID)
 	s.Require().NoError(err)
 }

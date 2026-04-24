@@ -1,17 +1,24 @@
-// Package auth implements authentication and session management logic.
-//
-// It supports Telegram-based authentication, JWT issuance, refresh token rotation,
-// session persistence, and revocation.
 package auth
 
-// TelegramLoginInput represents the data received from Telegram Login Widget
-// or Telegram Mini App during authentication.
-type TelegramLoginInput struct {
-	ID        int64
+// RegisterInput holds the user-provided data for standard email registration.
+type RegisterInput struct {
+	Email     string
+	Password  string
 	FirstName string
 	LastName  *string
 	Username  *string
-	PhotoURL  *string
-	AuthDate  int64
-	Hash      string
+}
+
+// LoginInput holds the credentials for standard email login.
+type LoginInput struct {
+	Email    string
+	Password string
+}
+
+// OAuthProfile represents unified user data received from any OAuth provider.
+type OAuthProfile struct {
+	ProviderID string
+	Email      string
+	Name       string
+	AvatarURL  string
 }

@@ -10,9 +10,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/backforge-app/backforge/internal/config"
+	inframailer "github.com/backforge-app/backforge/internal/infra/mailer"
+	infraoauth "github.com/backforge-app/backforge/internal/infra/oauth"
 	"github.com/backforge-app/backforge/internal/infra/postgres"
 	"github.com/backforge-app/backforge/internal/logger"
 	repoanalytics "github.com/backforge-app/backforge/internal/repository/analytics"
+	repooauth "github.com/backforge-app/backforge/internal/repository/oauthconnection"
 	repoprogress "github.com/backforge-app/backforge/internal/repository/progress"
 	repoquestion "github.com/backforge-app/backforge/internal/repository/question"
 	repoquestiontag "github.com/backforge-app/backforge/internal/repository/questiontag"
@@ -20,6 +23,7 @@ import (
 	repotag "github.com/backforge-app/backforge/internal/repository/tag"
 	repotopic "github.com/backforge-app/backforge/internal/repository/topic"
 	repouser "github.com/backforge-app/backforge/internal/repository/user"
+	repotoken "github.com/backforge-app/backforge/internal/repository/verificationtoken"
 	svcanalytics "github.com/backforge-app/backforge/internal/service/analytics"
 	svcauth "github.com/backforge-app/backforge/internal/service/auth"
 	svcprogress "github.com/backforge-app/backforge/internal/service/progress"
@@ -35,7 +39,9 @@ import (
 	"github.com/backforge-app/backforge/internal/transport/http/handler/tag"
 	"github.com/backforge-app/backforge/internal/transport/http/handler/topic"
 	"github.com/backforge-app/backforge/internal/transport/http/handler/user"
+	pkgmailer "github.com/backforge-app/backforge/pkg/mailer"
 	"github.com/backforge-app/backforge/pkg/transactor"
+	pkgyandex "github.com/backforge-app/backforge/pkg/yandex"
 )
 
 // App holds all application components.
@@ -58,6 +64,8 @@ type Repositories struct {
 	UserTopicProgress    *repoprogress.UserTopicRepository
 	QuestionTag          *repoquestiontag.Repository
 	Session              *reposession.Repository
+	OAuthConnection      *repooauth.Repository
+	VerificationToken    *repotoken.Repository
 }
 
 // Services holds all service instances.
@@ -74,13 +82,13 @@ type Services struct {
 // New creates and wires all application dependencies.
 // It does NOT start the HTTP server yet.
 func New(ctx context.Context) (*App, error) {
-	// Load config.
+	// 1. Load config
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
 
-	// Create logger.
+	// 2. Create logger
 	log, err := logger.New(logger.Config{
 		Environment: cfg.Env,
 		Level:       cfg.Logging.Level,
@@ -89,16 +97,39 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("create logger: %w", err)
 	}
 
-	// Create PostgreSQL pool.
+	// 3. Create PostgreSQL pool
 	pgPool, err := postgres.NewPool(ctx, cfg.Postgres.ConnectionURL, cfg.Postgres.Pool)
 	if err != nil {
 		return nil, fmt.Errorf("create postgres pool: %w", err)
 	}
 
-	// Wrap pool with transactor.
+	// 4. Wrap pool with transactor
 	tx := transactor.NewTransactor(postgres.NewPoolAdapter(pgPool), log)
 
-	// Setup repositories with DB/transaction awareness.
+	// 5. Setup generic external clients & infrastructure adapters
+	mailerCfg := pkgmailer.Config{
+		Host:        cfg.SMTP.Host,
+		Port:        cfg.SMTP.Port,
+		Username:    cfg.SMTP.Username,
+		Password:    cfg.SMTP.Password,
+		FromAddress: cfg.SMTP.FromAddress,
+	}
+	genericMailer := pkgmailer.New(mailerCfg)
+
+	// AuthSender parses HTML templates. If it fails (e.g., bad syntax), the app won't start.
+	authSender, err := inframailer.NewAuthSender(genericMailer, cfg.Client.URL)
+	if err != nil {
+		return nil, fmt.Errorf("initialize auth email sender: %w", err)
+	}
+
+	yandexCfg := pkgyandex.Config{
+		ClientID:     cfg.OAuth.Yandex.ClientID,
+		ClientSecret: cfg.OAuth.Yandex.ClientSecret,
+	}
+	genericYandexClient := pkgyandex.New(yandexCfg)
+	oauthAdapter := infraoauth.NewYandexAdapter(genericYandexClient)
+
+	// 6. Setup repositories
 	repos := &Repositories{
 		User:                 repouser.NewRepository(pgPool),
 		Question:             repoquestion.NewRepository(pgPool),
@@ -109,14 +140,25 @@ func New(ctx context.Context) (*App, error) {
 		UserTopicProgress:    repoprogress.NewUserTopicRepository(pgPool),
 		QuestionTag:          repoquestiontag.NewRepository(pgPool),
 		Session:              reposession.NewRepository(pgPool),
+		OAuthConnection:      repooauth.NewRepository(pgPool),
+		VerificationToken:    repotoken.NewRepository(pgPool),
 	}
 
+	// 7. Setup services
 	userSvc := svcuser.NewService(repos.User, tx)
 
-	// Setup services.
 	svcs := &Services{
-		User:      userSvc,
-		Auth:      svcauth.NewService(userSvc, repos.Session, tx, &cfg.Auth, cfg.Telegram.Token),
+		User: userSvc,
+		Auth: svcauth.NewService(
+			userSvc,
+			repos.Session,
+			repos.OAuthConnection,
+			repos.VerificationToken,
+			authSender,
+			oauthAdapter,
+			tx,
+			&cfg.Auth,
+		),
 		Question:  svcquestion.NewService(repos.Question, repos.QuestionTag, tx),
 		Topic:     svctopic.NewService(repos.Topic, tx),
 		Tag:       svctag.NewService(repos.Tag),
@@ -124,9 +166,9 @@ func New(ctx context.Context) (*App, error) {
 		Progress:  svcprogress.NewService(repos.UserQuestionProgress, repos.UserTopicProgress),
 	}
 
-	// Setup HTTP handlers.
+	// 8. Setup HTTP handlers
 	handlers := transporthttp.Handlers{
-		Auth:      auth.NewHandler(svcs.Auth, log, cfg),
+		Auth:      auth.NewHandler(svcs.Auth, log),
 		User:      user.NewHandler(svcs.User, log),
 		Question:  question.NewHandler(svcs.Question, log),
 		Topic:     topic.NewHandler(svcs.Topic, log),
@@ -135,10 +177,10 @@ func New(ctx context.Context) (*App, error) {
 		Analytics: analytics.NewHandler(svcs.Analytics, log),
 	}
 
-	// Setup HTTP router.
+	// 9. Setup HTTP router
 	router := transporthttp.NewRouter(cfg, log, handlers, userSvc)
 
-	// Create HTTP server.
+	// 10. Create HTTP server
 	server := transporthttp.NewServer(cfg, log, router)
 
 	return &App{

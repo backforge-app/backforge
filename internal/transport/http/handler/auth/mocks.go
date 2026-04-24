@@ -10,7 +10,6 @@ import (
 
 	auth "github.com/backforge-app/backforge/internal/service/auth"
 	gomock "github.com/golang/mock/gomock"
-	uuid "github.com/google/uuid"
 )
 
 // MockService is a mock of Service interface.
@@ -36,36 +35,36 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
 }
 
-// DevLogin mocks base method.
-func (m *MockService) DevLogin(arg0 context.Context, arg1 uuid.UUID) (string, string, error) {
+// Login mocks base method.
+func (m *MockService) Login(arg0 context.Context, arg1 auth.LoginInput) (string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DevLogin", arg0, arg1)
+	ret := m.ctrl.Call(m, "Login", arg0, arg1)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// DevLogin indicates an expected call of DevLogin.
-func (mr *MockServiceMockRecorder) DevLogin(arg0, arg1 interface{}) *gomock.Call {
+// Login indicates an expected call of Login.
+func (mr *MockServiceMockRecorder) Login(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DevLogin", reflect.TypeOf((*MockService)(nil).DevLogin), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockService)(nil).Login), arg0, arg1)
 }
 
-// LoginWithTelegram mocks base method.
-func (m *MockService) LoginWithTelegram(arg0 context.Context, arg1 auth.TelegramLoginInput) (string, string, error) {
+// LoginWithYandex mocks base method.
+func (m *MockService) LoginWithYandex(arg0 context.Context, arg1 string) (string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoginWithTelegram", arg0, arg1)
+	ret := m.ctrl.Call(m, "LoginWithYandex", arg0, arg1)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// LoginWithTelegram indicates an expected call of LoginWithTelegram.
-func (mr *MockServiceMockRecorder) LoginWithTelegram(arg0, arg1 interface{}) *gomock.Call {
+// LoginWithYandex indicates an expected call of LoginWithYandex.
+func (mr *MockServiceMockRecorder) LoginWithYandex(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoginWithTelegram", reflect.TypeOf((*MockService)(nil).LoginWithTelegram), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoginWithYandex", reflect.TypeOf((*MockService)(nil).LoginWithYandex), arg0, arg1)
 }
 
 // Refresh mocks base method.
@@ -82,4 +81,74 @@ func (m *MockService) Refresh(arg0 context.Context, arg1 string) (string, string
 func (mr *MockServiceMockRecorder) Refresh(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockService)(nil).Refresh), arg0, arg1)
+}
+
+// Register mocks base method.
+func (m *MockService) Register(arg0 context.Context, arg1 auth.RegisterInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Register", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Register indicates an expected call of Register.
+func (mr *MockServiceMockRecorder) Register(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockService)(nil).Register), arg0, arg1)
+}
+
+// RequestPasswordReset mocks base method.
+func (m *MockService) RequestPasswordReset(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequestPasswordReset", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RequestPasswordReset indicates an expected call of RequestPasswordReset.
+func (mr *MockServiceMockRecorder) RequestPasswordReset(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestPasswordReset", reflect.TypeOf((*MockService)(nil).RequestPasswordReset), arg0, arg1)
+}
+
+// ResendVerificationEmail mocks base method.
+func (m *MockService) ResendVerificationEmail(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResendVerificationEmail", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResendVerificationEmail indicates an expected call of ResendVerificationEmail.
+func (mr *MockServiceMockRecorder) ResendVerificationEmail(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResendVerificationEmail", reflect.TypeOf((*MockService)(nil).ResendVerificationEmail), arg0, arg1)
+}
+
+// ResetPassword mocks base method.
+func (m *MockService) ResetPassword(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResetPassword", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResetPassword indicates an expected call of ResetPassword.
+func (mr *MockServiceMockRecorder) ResetPassword(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetPassword", reflect.TypeOf((*MockService)(nil).ResetPassword), arg0, arg1, arg2)
+}
+
+// VerifyEmail mocks base method.
+func (m *MockService) VerifyEmail(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyEmail", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyEmail indicates an expected call of VerifyEmail.
+func (mr *MockServiceMockRecorder) VerifyEmail(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyEmail", reflect.TypeOf((*MockService)(nil).VerifyEmail), arg0, arg1)
 }

@@ -1,8 +1,3 @@
-// Package user implements the application service layer for user management.
-//
-// It contains business logic for user creation, updates, retrieval,
-// service-level errors, input DTOs (in other files), and coordinates
-// domain entities with the persistence layer.
 package user
 
 import (
@@ -11,16 +6,28 @@ import (
 	"github.com/backforge-app/backforge/internal/domain"
 )
 
-// CreateInput holds data for creating a new user.
-type CreateInput struct {
-	TelegramID int64
-	FirstName  string
-	LastName   *string
-	Username   *string
-	PhotoURL   *string
+// CreateWithPasswordInput holds the data required to register a user via email and password.
+type CreateWithPasswordInput struct {
+	Email     string
+	Password  string
+	FirstName string
+	LastName  *string
+	Username  *string
+	PhotoURL  *string
 }
 
-// UpdateInput holds data for updating an existing user.
+// CreateOAuthInput holds the data required to register a user via a third-party provider.
+type CreateOAuthInput struct {
+	Email           string
+	FirstName       string
+	LastName        *string
+	Username        *string
+	PhotoURL        *string
+	IsEmailVerified bool
+}
+
+// UpdateInput holds data for modifying an existing user's profile.
+// Only non-nil fields will be applied.
 type UpdateInput struct {
 	ID        uuid.UUID
 	FirstName *string

@@ -25,58 +25,92 @@ definitions:
     type: object
   auth.loginRequest:
     properties:
-      auth_date:
-        description: Authorization timestamp
-        type: integer
-      first_name:
-        description: First name
+      email:
         type: string
-      hash:
-        description: Telegram login hash
-        type: string
-      id:
-        description: Telegram user ID
-        type: integer
-      last_name:
-        description: Last name (optional)
-        type: string
-      photo_url:
-        description: Avatar URL (optional)
-        type: string
-      username:
-        description: Telegram username (optional)
+      password:
         type: string
     required:
-    - auth_date
-    - first_name
-    - hash
-    - id
-    type: object
-  auth.loginResponse:
-    properties:
-      access_token:
-        description: JWT token
-        type: string
-      refresh_token:
-        description: Refresh token
-        type: string
+    - email
+    - password
     type: object
   auth.refreshRequest:
     properties:
       refresh_token:
-        description: Existing refresh token
         type: string
     required:
     - refresh_token
     type: object
-  auth.refreshResponse:
+  auth.registerRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        maxLength: 64
+        minLength: 2
+        type: string
+      last_name:
+        maxLength: 64
+        minLength: 2
+        type: string
+      password:
+        maxLength: 72
+        minLength: 8
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - email
+    - first_name
+    - password
+    type: object
+  auth.requestResetRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  auth.resendVerificationRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  auth.resetPasswordRequest:
+    properties:
+      new_password:
+        maxLength: 72
+        minLength: 8
+        type: string
+      token:
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  auth.tokenResponse:
     properties:
       access_token:
-        description: New JWT token
         type: string
       refresh_token:
-        description: New refresh token
         type: string
+    type: object
+  auth.verifyEmailRequest:
+    properties:
+      token:
+        type: string
+    required:
+    - token
+    type: object
+  auth.yandexCallbackRequest:
+    properties:
+      code:
+        type: string
+    required:
+    - code
     type: object
   domain.ProgressStatus:
     enum:
@@ -258,6 +292,11 @@ definitions:
       error:
         type: string
     type: object
+  render.Message:
+    properties:
+      message:
+        type: string
+    type: object
   tag.createRequest:
     properties:
       created_by:
@@ -347,20 +386,41 @@ definitions:
         description: Updater user ID
         type: string
     type: object
-  user.userResponse:
+  user.updateProfileRequest:
     properties:
       first_name:
+        maxLength: 64
+        minLength: 2
         type: string
+      last_name:
+        maxLength: 64
+        minLength: 2
+        type: string
+      photo_url:
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    type: object
+  user.userResponse:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      has_password:
+        type: boolean
       id:
         type: string
+      is_email_verified:
+        type: boolean
       last_name:
         type: string
       photo_url:
         type: string
       role:
         type: string
-      telegram_id:
-        type: integer
       username:
         type: string
     type: object
@@ -680,45 +740,37 @@ paths:
       summary: Get topic progress percentages
       tags:
       - Analytics
-  /api/v1/auth/refresh:
+  /auth/forgot-password:
     post:
       consumes:
       - application/json
-      description: Exchange a refresh token for a new access token
+      description: Sends a password reset link to the provided email if it exists
       parameters:
-      - description: Refresh token payload
+      - description: Email payload
         in: body
-        name: refresh
+        name: request
         required: true
         schema:
-          $ref: '#/definitions/auth.refreshRequest'
+          $ref: '#/definitions/auth.requestResetRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: New access and refresh tokens
+          description: If the email is registered, a reset link has been sent
           schema:
-            $ref: '#/definitions/auth.refreshResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/render.Error'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/render.Error'
-      summary: Refresh access token
+            $ref: '#/definitions/render.Message'
+      summary: Request password reset email
       tags:
       - Auth
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Login endpoint for Telegram auth
+      description: Authenticates a user and returns access and refresh tokens
       parameters:
       - description: Login payload
         in: body
-        name: login
+        name: request
         required: true
         schema:
           $ref: '#/definitions/auth.loginRequest'
@@ -728,20 +780,191 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.loginResponse'
+            $ref: '#/definitions/auth.tokenResponse'
         "400":
-          description: Bad Request
+          description: Validation failed
           schema:
             $ref: '#/definitions/render.Error'
         "401":
-          description: Unauthorized
+          description: Invalid credentials or unverified email
           schema:
             $ref: '#/definitions/render.Error'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/render.Error'
-      summary: Login using Telegram
+      summary: Login using email and password
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a valid refresh token for a new pair of access and refresh
+        tokens
+      parameters:
+      - description: Refresh token payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.tokenResponse'
+        "401":
+          description: Invalid or revoked token
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Refresh access token
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new user and sends an email verification link
+      parameters:
+      - description: Registration payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Registration successful. Please check your email.
+          schema:
+            $ref: '#/definitions/render.Message'
+        "400":
+          description: Validation failed
+          schema:
+            $ref: '#/definitions/render.Error'
+        "409":
+          description: Email or Username already taken
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Register a new user
+      tags:
+      - Auth
+  /auth/resend-verification:
+    post:
+      consumes:
+      - application/json
+      description: Sends a new email verification link if the account exists and is
+        not yet verified
+      parameters:
+      - description: Email payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.resendVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: If the account exists and needs verification, an email has
+            been sent
+          schema:
+            $ref: '#/definitions/render.Message'
+        "400":
+          description: Email is already verified
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Resend verification email
+      tags:
+      - Auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Sets a new password using a valid reset token
+      parameters:
+      - description: Token and new password payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.resetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successfully
+          schema:
+            $ref: '#/definitions/render.Message'
+        "400":
+          description: Invalid or expired token
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Set a new password
+      tags:
+      - Auth
+  /auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a user's email using the token sent to their inbox
+      parameters:
+      - description: Verification token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.verifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified successfully
+          schema:
+            $ref: '#/definitions/render.Message'
+        "400":
+          description: Invalid or expired token
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Verify user email
+      tags:
+      - Auth
+  /auth/yandex/callback:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges Yandex authorization code for JWT tokens
+      parameters:
+      - description: Yandex code payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.yandexCallbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.tokenResponse'
+        "400":
+          description: Invalid code or OAuth failure
+          schema:
+            $ref: '#/definitions/render.Error'
+      summary: Yandex OAuth Callback
       tags:
       - Auth
   /progress/known:
@@ -1228,6 +1451,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Get current user profile
+      tags:
+      - Users
+    patch:
+      consumes:
+      - application/json
+      description: Updates the authenticated user's mutable fields (e.g., name, username,
+        photo)
+      parameters:
+      - description: Profile update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.updateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated successfully
+          schema:
+            $ref: '#/definitions/render.Message'
+        "400":
+          description: Validation failed or invalid JSON
+          schema:
+            $ref: '#/definitions/render.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/render.Error'
+        "409":
+          description: Username already taken
+          schema:
+            $ref: '#/definitions/render.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/render.Error'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
       tags:
       - Users
 swagger: "2.0"

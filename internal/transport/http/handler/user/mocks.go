@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/backforge-app/backforge/internal/domain"
+	user "github.com/backforge-app/backforge/internal/service/user"
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
 )
@@ -49,4 +50,18 @@ func (m *MockService) GetByID(arg0 context.Context, arg1 uuid.UUID) (*domain.Use
 func (mr *MockServiceMockRecorder) GetByID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockService)(nil).GetByID), arg0, arg1)
+}
+
+// Update mocks base method.
+func (m *MockService) Update(arg0 context.Context, arg1 user.UpdateInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockServiceMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockService)(nil).Update), arg0, arg1)
 }

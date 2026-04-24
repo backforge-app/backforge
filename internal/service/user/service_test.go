@@ -2,7 +2,7 @@ package user
 
 import (
 	"context"
-	"errors"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -11,39 +11,42 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/backforge-app/backforge/internal/domain"
-	"github.com/backforge-app/backforge/internal/repository/user"
+	repouser "github.com/backforge-app/backforge/internal/repository/user"
 )
 
-func TestUser_Create(t *testing.T) {
+// setupTxMock is a helper to automatically execute the function passed to WithinTx.
+func setupTxMock(transactor *MockTransactor, ctx context.Context) {
+	transactor.EXPECT().
+		WithinTx(ctx, gomock.Any()).
+		DoAndReturn(func(_ context.Context, fn func(context.Context) error) error {
+			return fn(ctx)
+		}).AnyTimes()
+}
+
+func TestService_CreateWithPassword(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	repo := NewMockRepository(ctrl)
-	transactor := NewMockTransactor(ctrl)
-	svc := NewService(repo, transactor)
+	svc := NewService(repo, nil)
 
 	ctx := context.Background()
 	validID := uuid.New()
-
-	lastName := "Doe"
-	username := "johndoe"
-	photoURL := "https://example.com/photo.jpg"
+	longPassword := strings.Repeat("a", 73)
 
 	tests := []struct {
 		name        string
-		input       CreateInput
+		input       CreateWithPasswordInput
 		mockSetup   func()
 		expectedID  uuid.UUID
 		expectedErr error
 	}{
 		{
-			name: "Success with all fields",
-			input: CreateInput{
-				TelegramID: 12345,
-				FirstName:  "John",
-				LastName:   &lastName,
-				Username:   &username,
-				PhotoURL:   &photoURL,
+			name: "Success",
+			input: CreateWithPasswordInput{
+				Email:     "test@example.com",
+				Password:  "securepassword",
+				FirstName: "John",
 			},
 			mockSetup: func() {
 				repo.EXPECT().
@@ -54,78 +57,48 @@ func TestUser_Create(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name: "Success minimal",
-			input: CreateInput{
-				TelegramID: 54321,
-				FirstName:  "Alice",
-			},
-			mockSetup: func() {
-				repo.EXPECT().
-					Create(ctx, gomock.Any()).
-					Return(validID, nil)
-			},
-			expectedID:  validID,
-			expectedErr: nil,
-		},
-		{
-			name: "Fail - invalid TelegramID",
-			input: CreateInput{
-				TelegramID: 0,
+			name: "Fail - empty email",
+			input: CreateWithPasswordInput{
+				Email:    "",
+				Password: "password123",
 			},
 			mockSetup:   func() {},
 			expectedID:  uuid.Nil,
 			expectedErr: ErrUserInvalidData,
 		},
 		{
-			name: "Fail - TelegramID already taken",
-			input: CreateInput{
-				TelegramID: 12345,
+			name: "Fail - password too long",
+			input: CreateWithPasswordInput{
+				Email:    "test@example.com",
+				Password: longPassword,
 			},
-			mockSetup: func() {
-				repo.EXPECT().
-					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, user.ErrUserTelegramIDTaken)
-			},
+			mockSetup:   func() {},
 			expectedID:  uuid.Nil,
-			expectedErr: ErrUserTelegramIDTaken,
+			expectedErr: ErrPasswordTooLong,
 		},
 		{
-			name: "Fail - invalid role",
-			input: CreateInput{
-				TelegramID: 12345,
+			name: "Fail - email taken",
+			input: CreateWithPasswordInput{
+				Email:    "taken@example.com",
+				Password: "password123",
 			},
 			mockSetup: func() {
 				repo.EXPECT().
 					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, user.ErrUserInvalidRole)
+					Return(uuid.Nil, repouser.ErrUserEmailTaken)
 			},
 			expectedID:  uuid.Nil,
-			expectedErr: ErrUserInvalidRole,
-		},
-		{
-			name: "Fail - general repository error",
-			input: CreateInput{
-				TelegramID: 12345,
-			},
-			mockSetup: func() {
-				repo.EXPECT().
-					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, errors.New("database unavailable"))
-			},
-			expectedID:  uuid.Nil,
-			expectedErr: errors.New("create user: database unavailable"),
+			expectedErr: ErrUserEmailTaken,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-
-			id, err := svc.Create(ctx, tt.input)
+			id, err := svc.CreateWithPassword(ctx, tt.input)
 
 			if tt.expectedErr != nil {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.expectedErr.Error())
+				require.ErrorIs(t, err, tt.expectedErr)
 				assert.Equal(t, tt.expectedID, id)
 			} else {
 				require.NoError(t, err)
@@ -135,7 +108,7 @@ func TestUser_Create(t *testing.T) {
 	}
 }
 
-func TestUser_GetByID(t *testing.T) {
+func TestService_CreateOAuthUser(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -143,246 +116,57 @@ func TestUser_GetByID(t *testing.T) {
 	svc := NewService(repo, nil)
 
 	ctx := context.Background()
-	userID := uuid.New()
-	expectedUser := &domain.User{ID: userID, TelegramID: 12345}
+	validID := uuid.New()
 
 	tests := []struct {
 		name        string
-		id          uuid.UUID
+		input       CreateOAuthInput
 		mockSetup   func()
-		expectedRes *domain.User
+		expectedID  uuid.UUID
 		expectedErr error
 	}{
 		{
 			name: "Success",
-			id:   userID,
-			mockSetup: func() {
-				repo.EXPECT().GetByID(ctx, userID).Return(expectedUser, nil)
+			input: CreateOAuthInput{
+				Email:           "oauth@example.com",
+				FirstName:       "GitHub",
+				IsEmailVerified: true,
 			},
-			expectedRes: expectedUser,
+			mockSetup: func() {
+				repo.EXPECT().
+					Create(ctx, gomock.Any()).
+					Return(validID, nil)
+			},
+			expectedID:  validID,
 			expectedErr: nil,
 		},
 		{
-			name: "Fail - user not found",
-			id:   userID,
-			mockSetup: func() {
-				repo.EXPECT().GetByID(ctx, userID).Return(nil, user.ErrUserNotFound)
+			name: "Fail - empty email",
+			input: CreateOAuthInput{
+				Email: "   ",
 			},
-			expectedRes: nil,
-			expectedErr: ErrUserNotFound,
-		},
-		{
-			name: "Fail - general error",
-			id:   userID,
-			mockSetup: func() {
-				repo.EXPECT().GetByID(ctx, userID).Return(nil, errors.New("db timeout"))
-			},
-			expectedRes: nil,
-			expectedErr: errors.New("get user by ID: db timeout"),
+			mockSetup:   func() {},
+			expectedID:  uuid.Nil,
+			expectedErr: ErrUserInvalidData,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-
-			u, err := svc.GetByID(ctx, tt.id)
+			id, err := svc.CreateOAuthUser(ctx, tt.input)
 
 			if tt.expectedErr != nil {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.expectedErr.Error())
-				assert.Nil(t, u)
+				require.ErrorIs(t, err, tt.expectedErr)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedRes, u)
+				assert.Equal(t, tt.expectedID, id)
 			}
 		})
 	}
 }
 
-func TestUser_GetByTelegramID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	repo := NewMockRepository(ctrl)
-	svc := NewService(repo, nil)
-
-	ctx := context.Background()
-	telegramID := int64(98765)
-	expectedUser := &domain.User{TelegramID: telegramID}
-
-	tests := []struct {
-		name        string
-		tgID        int64
-		mockSetup   func()
-		expectedRes *domain.User
-		expectedErr error
-	}{
-		{
-			name: "Success",
-			tgID: telegramID,
-			mockSetup: func() {
-				repo.EXPECT().GetByTelegramID(ctx, telegramID).Return(expectedUser, nil)
-			},
-			expectedRes: expectedUser,
-			expectedErr: nil,
-		},
-		{
-			name: "Fail - user not found",
-			tgID: telegramID,
-			mockSetup: func() {
-				repo.EXPECT().GetByTelegramID(ctx, telegramID).Return(nil, user.ErrUserNotFound)
-			},
-			expectedRes: nil,
-			expectedErr: ErrUserNotFound,
-		},
-		{
-			name: "Fail - general error",
-			tgID: telegramID,
-			mockSetup: func() {
-				repo.EXPECT().GetByTelegramID(ctx, telegramID).Return(nil, errors.New("connection lost"))
-			},
-			expectedRes: nil,
-			expectedErr: errors.New("get user by Telegram ID: connection lost"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			u, err := svc.GetByTelegramID(ctx, tt.tgID)
-
-			if tt.expectedErr != nil {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.expectedErr.Error())
-				assert.Nil(t, u)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expectedRes, u)
-			}
-		})
-	}
-}
-
-func TestUser_GetOrCreateByTelegramID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	repo := NewMockRepository(ctrl)
-	transactor := NewMockTransactor(ctrl)
-	svc := NewService(repo, transactor)
-
-	ctx := context.Background()
-
-	telegramID := int64(77777)
-	userID := uuid.New()
-
-	input := CreateInput{
-		TelegramID: telegramID,
-		FirstName:  "TestUser",
-	}
-
-	existingUser := &domain.User{
-		ID:         userID,
-		TelegramID: telegramID,
-		FirstName:  "TestUser",
-	}
-
-	tests := []struct {
-		name        string
-		mockSetup   func()
-		expected    *domain.User
-		expectedErr error
-	}{
-		{
-			name: "User already exists",
-			mockSetup: func() {
-				repo.EXPECT().
-					GetByTelegramID(ctx, telegramID).
-					Return(existingUser, nil)
-			},
-			expected:    existingUser,
-			expectedErr: nil,
-		},
-		{
-			name: "Create new user",
-			mockSetup: func() {
-				repo.EXPECT().
-					GetByTelegramID(ctx, telegramID).
-					Return(nil, user.ErrUserNotFound)
-
-				repo.EXPECT().
-					Create(ctx, gomock.Any()).
-					Return(userID, nil)
-
-				repo.EXPECT().
-					GetByID(ctx, userID).
-					Return(existingUser, nil)
-			},
-			expected:    existingUser,
-			expectedErr: nil,
-		},
-		{
-			name: "Fail - error on GetByTelegramID",
-			mockSetup: func() {
-				repo.EXPECT().
-					GetByTelegramID(ctx, telegramID).
-					Return(nil, errors.New("query failed"))
-			},
-			expectedErr: errors.New("query failed"),
-		},
-		{
-			name: "Fail - error on Create",
-			mockSetup: func() {
-				repo.EXPECT().
-					GetByTelegramID(ctx, telegramID).
-					Return(nil, user.ErrUserNotFound)
-
-				repo.EXPECT().
-					Create(ctx, gomock.Any()).
-					Return(uuid.Nil, errors.New("insert failed"))
-			},
-			expectedErr: errors.New("insert failed"),
-		},
-		{
-			name: "Fail - error on GetByID after create",
-			mockSetup: func() {
-				repo.EXPECT().
-					GetByTelegramID(ctx, telegramID).
-					Return(nil, user.ErrUserNotFound)
-
-				repo.EXPECT().
-					Create(ctx, gomock.Any()).
-					Return(userID, nil)
-
-				repo.EXPECT().
-					GetByID(ctx, userID).
-					Return(nil, errors.New("fetch after create failed"))
-			},
-			expectedErr: errors.New("fetch after create failed"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			u, err := svc.GetOrCreateByTelegramID(ctx, input)
-
-			if tt.expectedErr != nil {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.expectedErr.Error())
-				assert.Nil(t, u)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expected, u)
-			}
-		})
-	}
-}
-
-func TestUser_Update(t *testing.T) {
+func TestService_Update(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -393,41 +177,30 @@ func TestUser_Update(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	existingUser := &domain.User{
-		ID:         userID,
-		TelegramID: 11111,
-		FirstName:  "OldName",
+		ID:        userID,
+		Email:     "test@example.com",
+		FirstName: "OldName",
 	}
 
 	tests := []struct {
 		name      string
 		input     UpdateInput
 		mockSetup func()
-		wantErr   bool
+		wantErr   error
 	}{
 		{
-			name: "Success - update names and pro status",
+			name: "Success",
 			input: UpdateInput{
 				ID:        userID,
 				FirstName: ptr("NewFirst"),
-				LastName:  ptr("NewLast"),
 				Username:  ptr("new_username"),
 			},
 			mockSetup: func() {
-				transactor.EXPECT().
-					WithinTx(ctx, gomock.Any()).
-					DoAndReturn(func(_ context.Context, fn func(context.Context) error) error {
-						return fn(ctx)
-					})
-
-				repo.EXPECT().
-					GetByID(ctx, userID).
-					Return(existingUser, nil)
-
-				repo.EXPECT().
-					Update(ctx, gomock.Any()).
-					Return(nil)
+				setupTxMock(transactor, ctx)
+				repo.EXPECT().GetByID(ctx, userID).Return(existingUser, nil)
+				repo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
 			},
-			wantErr: false,
+			wantErr: nil,
 		},
 		{
 			name: "Fail - user not found",
@@ -435,28 +208,33 @@ func TestUser_Update(t *testing.T) {
 				ID: userID,
 			},
 			mockSetup: func() {
-				transactor.EXPECT().
-					WithinTx(ctx, gomock.Any()).
-					DoAndReturn(func(_ context.Context, fn func(context.Context) error) error {
-						return fn(ctx)
-					})
-
-				repo.EXPECT().
-					GetByID(ctx, userID).
-					Return(nil, user.ErrUserNotFound)
+				setupTxMock(transactor, ctx)
+				repo.EXPECT().GetByID(ctx, userID).Return(nil, repouser.ErrUserNotFound)
 			},
-			wantErr: true,
+			wantErr: ErrUserNotFound,
+		},
+		{
+			name: "Fail - username taken",
+			input: UpdateInput{
+				ID:       userID,
+				Username: ptr("taken_username"),
+			},
+			mockSetup: func() {
+				setupTxMock(transactor, ctx)
+				repo.EXPECT().GetByID(ctx, userID).Return(existingUser, nil)
+				repo.EXPECT().Update(ctx, gomock.Any()).Return(repouser.ErrUserUsernameTaken)
+			},
+			wantErr: ErrUserUsernameTaken,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-
 			err := svc.Update(ctx, tt.input)
 
-			if tt.wantErr {
-				require.Error(t, err)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
 			} else {
 				require.NoError(t, err)
 			}
@@ -464,7 +242,163 @@ func TestUser_Update(t *testing.T) {
 	}
 }
 
-func TestUser_IsAdmin(t *testing.T) {
+func TestService_SetNewPassword(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := NewMockRepository(ctrl)
+	transactor := NewMockTransactor(ctrl)
+	svc := NewService(repo, transactor)
+
+	ctx := context.Background()
+	userID := uuid.New()
+
+	tests := []struct {
+		name      string
+		id        uuid.UUID
+		password  string
+		mockSetup func()
+		wantErr   error
+	}{
+		{
+			name:     "Success",
+			id:       userID,
+			password: "new_secure_password",
+			mockSetup: func() {
+				setupTxMock(transactor, ctx)
+				repo.EXPECT().GetByID(ctx, userID).Return(&domain.User{ID: userID}, nil)
+				repo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+			},
+			wantErr: nil,
+		},
+		{
+			name:     "Fail - password too long",
+			id:       userID,
+			password: strings.Repeat("a", 73),
+			mockSetup: func() {
+				setupTxMock(transactor, ctx)
+				repo.EXPECT().GetByID(ctx, userID).Return(&domain.User{ID: userID}, nil)
+			},
+			wantErr: ErrPasswordTooLong,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			err := svc.SetNewPassword(ctx, tt.id, tt.password)
+
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestService_MarkEmailVerified(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := NewMockRepository(ctrl)
+	transactor := NewMockTransactor(ctrl)
+	svc := NewService(repo, transactor)
+
+	ctx := context.Background()
+	userID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		setupTxMock(transactor, ctx)
+		repo.EXPECT().GetByID(ctx, userID).Return(&domain.User{ID: userID}, nil)
+		repo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+
+		err := svc.MarkEmailVerified(ctx, userID)
+		require.NoError(t, err)
+	})
+}
+
+func TestService_GetByEmail(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := NewMockRepository(ctrl)
+	svc := NewService(repo, nil)
+
+	ctx := context.Background()
+	email := "test@example.com"
+	expectedUser := &domain.User{Email: email}
+
+	tests := []struct {
+		name        string
+		email       string
+		mockSetup   func()
+		expectedRes *domain.User
+		expectedErr error
+	}{
+		{
+			name:  "Success (trims and lowers email)",
+			email: "  TeSt@ExAmPlE.CoM  ",
+			mockSetup: func() {
+				repo.EXPECT().GetByEmail(ctx, "test@example.com").Return(expectedUser, nil)
+			},
+			expectedRes: expectedUser,
+			expectedErr: nil,
+		},
+		{
+			name:  "Fail - user not found",
+			email: "notfound@example.com",
+			mockSetup: func() {
+				repo.EXPECT().GetByEmail(ctx, "notfound@example.com").Return(nil, repouser.ErrUserNotFound)
+			},
+			expectedRes: nil,
+			expectedErr: ErrUserNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			u, err := svc.GetByEmail(ctx, tt.email)
+
+			if tt.expectedErr != nil {
+				require.ErrorIs(t, err, tt.expectedErr)
+				assert.Nil(t, u)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedRes, u)
+			}
+		})
+	}
+}
+
+func TestService_GetByID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := NewMockRepository(ctrl)
+	svc := NewService(repo, nil)
+
+	ctx := context.Background()
+	userID := uuid.New()
+	expectedUser := &domain.User{ID: userID}
+
+	t.Run("Success", func(t *testing.T) {
+		repo.EXPECT().GetByID(ctx, userID).Return(expectedUser, nil)
+		u, err := svc.GetByID(ctx, userID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedUser, u)
+	})
+
+	t.Run("Not Found", func(t *testing.T) {
+		repo.EXPECT().GetByID(ctx, userID).Return(nil, repouser.ErrUserNotFound)
+		u, err := svc.GetByID(ctx, userID)
+		require.ErrorIs(t, err, ErrUserNotFound)
+		assert.Nil(t, u)
+	})
+}
+
+func TestService_IsAdmin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -474,60 +408,19 @@ func TestUser_IsAdmin(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 
-	tests := []struct {
-		name        string
-		mockSetup   func()
-		expectedRes bool
-		expectedErr error
-	}{
-		{
-			name: "Success - user is admin",
-			mockSetup: func() {
-				repo.EXPECT().
-					IsAdmin(ctx, userID).
-					Return(true, nil)
-			},
-			expectedRes: true,
-			expectedErr: nil,
-		},
-		{
-			name: "Success - user is not admin",
-			mockSetup: func() {
-				repo.EXPECT().
-					IsAdmin(ctx, userID).
-					Return(false, nil)
-			},
-			expectedRes: false,
-			expectedErr: nil,
-		},
-		{
-			name: "Fail - repository error",
-			mockSetup: func() {
-				repo.EXPECT().
-					IsAdmin(ctx, userID).
-					Return(false, errors.New("db error"))
-			},
-			expectedRes: false,
-			expectedErr: errors.New("check if user is admin: db error"),
-		},
-	}
+	t.Run("True", func(t *testing.T) {
+		repo.EXPECT().IsAdmin(ctx, userID).Return(true, nil)
+		isAdmin, err := svc.IsAdmin(ctx, userID)
+		require.NoError(t, err)
+		assert.True(t, isAdmin)
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetup()
-
-			res, err := svc.IsAdmin(ctx, userID)
-
-			if tt.expectedErr != nil {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.expectedErr.Error())
-				assert.Equal(t, tt.expectedRes, res)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expectedRes, res)
-			}
-		})
-	}
+	t.Run("False", func(t *testing.T) {
+		repo.EXPECT().IsAdmin(ctx, userID).Return(false, nil)
+		isAdmin, err := svc.IsAdmin(ctx, userID)
+		require.NoError(t, err)
+		assert.False(t, isAdmin)
+	})
 }
 
 func ptr[T any](v T) *T {

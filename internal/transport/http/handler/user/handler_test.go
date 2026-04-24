@@ -1,6 +1,8 @@
 package user
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -25,24 +27,25 @@ func setupTest(t *testing.T) (*MockService, *Handler) {
 	return mockService, handler
 }
 
-// withAuthContext injects a user ID into the request context.
+// withAuthContext injects a user ID into the request context to simulate an authenticated user.
 func withAuthContext(r *http.Request, userID uuid.UUID) *http.Request {
 	return r.WithContext(middleware.WithUserID(r.Context(), userID))
+}
+
+// ptr is a generic helper to quickly create pointers for inline test struct definitions.
+func ptr[T any](v T) *T {
+	return &v
 }
 
 func TestHandler_GetProfile(t *testing.T) {
 	mockService, handler := setupTest(t)
 	userID := uuid.New()
 
-	// Helper pointers for optional fields
-	lastName := "Doe"
-	username := "johndoe"
-
 	tests := []struct {
 		name           string
+		auth           bool
 		mockSetup      func()
 		expectedStatus int
-		auth           bool
 	}{
 		{
 			name: "Success",
@@ -51,12 +54,13 @@ func TestHandler_GetProfile(t *testing.T) {
 				mockService.EXPECT().
 					GetByID(gomock.Any(), userID).
 					Return(&domain.User{
-						ID:         userID,
-						TelegramID: 12345678,
-						FirstName:  "John",
-						LastName:   &lastName,
-						Username:   &username,
-						Role:       domain.UserRoleUser,
+						ID:              userID,
+						Email:           "test@example.com",
+						IsEmailVerified: true,
+						FirstName:       "John",
+						LastName:        ptr("Doe"),
+						Username:        ptr("johndoe"),
+						Role:            domain.UserRoleUser,
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -92,13 +96,116 @@ func TestHandler_GetProfile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
+
 			req := httptest.NewRequest(http.MethodGet, "/users/me", nil)
 			if tt.auth {
 				req = withAuthContext(req, userID)
 			}
-			rr := httptest.NewRecorder()
 
+			rr := httptest.NewRecorder()
 			handler.GetProfile(rr, req)
+
+			assert.Equal(t, tt.expectedStatus, rr.Code)
+		})
+	}
+}
+
+func TestHandler_UpdateProfile(t *testing.T) {
+	mockService, handler := setupTest(t)
+	userID := uuid.New()
+
+	tests := []struct {
+		name           string
+		auth           bool
+		payload        string
+		mockSetup      func()
+		expectedStatus int
+	}{
+		{
+			name:    "Success",
+			auth:    true,
+			payload: `{"first_name":"Jane","username":"jane_doe"}`,
+			mockSetup: func() {
+				mockService.EXPECT().
+					Update(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, input serviceuser.UpdateInput) error {
+						assert.Equal(t, userID, input.ID)
+						assert.Equal(t, "Jane", *input.FirstName)
+						assert.Equal(t, "jane_doe", *input.Username)
+						return nil
+					})
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Unauthorized - Missing Context",
+			auth:           false,
+			payload:        `{"first_name":"Jane"}`,
+			mockSetup:      func() {},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "Bad Request - Invalid JSON",
+			auth:           true,
+			payload:        `{"first_name": "Jane"`,
+			mockSetup:      func() {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Bad Request - Validation Failed (Username too short)",
+			auth:           true,
+			payload:        `{"username":"a"}`,
+			mockSetup:      func() {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:    "Conflict - Username Already Taken",
+			auth:    true,
+			payload: `{"username":"taken_username"}`,
+			mockSetup: func() {
+				mockService.EXPECT().
+					Update(gomock.Any(), gomock.Any()).
+					Return(serviceuser.ErrUserUsernameTaken)
+			},
+			expectedStatus: http.StatusConflict,
+		},
+		{
+			name:    "Not Found - User Deleted Mid-Session",
+			auth:    true,
+			payload: `{"first_name":"Jane"}`,
+			mockSetup: func() {
+				mockService.EXPECT().
+					Update(gomock.Any(), gomock.Any()).
+					Return(serviceuser.ErrUserNotFound)
+			},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:    "Internal Server Error",
+			auth:    true,
+			payload: `{"first_name":"Jane"}`,
+			mockSetup: func() {
+				mockService.EXPECT().
+					Update(gomock.Any(), gomock.Any()).
+					Return(errors.New("database timeout"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			req := httptest.NewRequest(http.MethodPatch, "/users/me", bytes.NewBufferString(tt.payload))
+			req.Header.Set("Content-Type", "application/json")
+			if tt.auth {
+				req = withAuthContext(req, userID)
+			}
+
+			rr := httptest.NewRecorder()
+			handler.UpdateProfile(rr, req)
+
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
 	}

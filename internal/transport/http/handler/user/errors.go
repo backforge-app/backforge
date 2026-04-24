@@ -1,4 +1,3 @@
-// Package user defines custom errors for user HTTP handlers.
 package user
 
 import "errors"
@@ -10,6 +9,9 @@ var (
 	// ErrUnauthorized indicates the user is not authenticated.
 	ErrUnauthorized = errors.New("unauthorized access")
 
-	// ErrInternalServer indicates an internal server error.
+	// ErrUsernameTaken indicates the requested username is already in use by another account.
+	ErrUsernameTaken = errors.New("username is already taken")
+
+	// ErrInternalServer indicates an unexpected internal server error.
 	ErrInternalServer = errors.New("internal server error")
 )

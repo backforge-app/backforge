@@ -75,7 +75,9 @@ func (s *ProgressRepoTestSuite) TearDownSuite() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	_ = s.pgCont.Terminate(s.ctx)
+	if s.pgCont != nil {
+		_ = s.pgCont.Terminate(s.ctx)
+	}
 }
 
 func (s *ProgressRepoTestSuite) SetupTest() {
@@ -94,12 +96,14 @@ func (s *ProgressRepoTestSuite) TestUserQuestion_SetAndGet() {
 	err = s.qRepo.SetStatus(s.ctx, s.testUserID, s.testQID, domain.ProgressStatusSkipped)
 	s.Require().NoError(err)
 
-	pUpdated, _ := s.qRepo.GetByUserAndQuestion(s.ctx, s.testUserID, s.testQID)
+	pUpdated, err := s.qRepo.GetByUserAndQuestion(s.ctx, s.testUserID, s.testQID)
+	s.Require().NoError(err)
 	s.Equal(domain.ProgressStatusSkipped, pUpdated.Status)
 }
 
 func (s *ProgressRepoTestSuite) TestUserQuestion_ListAndReset() {
-	_ = s.qRepo.SetStatus(s.ctx, s.testUserID, s.testQID, domain.ProgressStatusKnown)
+	err := s.qRepo.SetStatus(s.ctx, s.testUserID, s.testQID, domain.ProgressStatusKnown)
+	s.Require().NoError(err)
 
 	list, err := s.qRepo.ListByUserAndTopic(s.ctx, s.testUserID, s.testTopicID)
 	s.Require().NoError(err)
@@ -108,7 +112,8 @@ func (s *ProgressRepoTestSuite) TestUserQuestion_ListAndReset() {
 	err = s.qRepo.ResetByTopic(s.ctx, s.testUserID, s.testTopicID)
 	s.Require().NoError(err)
 
-	listEmpty, _ := s.qRepo.ListByUserAndTopic(s.ctx, s.testUserID, s.testTopicID)
+	listEmpty, err := s.qRepo.ListByUserAndTopic(s.ctx, s.testUserID, s.testTopicID)
+	s.Require().NoError(err)
 	s.Empty(listEmpty)
 }
 
@@ -123,17 +128,20 @@ func (s *ProgressRepoTestSuite) TestUserTopic_Position() {
 	err = s.tRepo.SetPosition(s.ctx, s.testUserID, s.testTopicID, 20)
 	s.Require().NoError(err)
 
-	pUpdated, _ := s.tRepo.GetByUserAndTopic(s.ctx, s.testUserID, s.testTopicID)
+	pUpdated, err := s.tRepo.GetByUserAndTopic(s.ctx, s.testUserID, s.testTopicID)
+	s.Require().NoError(err)
 	s.Equal(20, pUpdated.CurrentPosition)
 }
 
 func (s *ProgressRepoTestSuite) TestUserTopic_Reset() {
-	_ = s.tRepo.SetPosition(s.ctx, s.testUserID, s.testTopicID, 50)
-
-	err := s.tRepo.ResetByTopic(s.ctx, s.testUserID, s.testTopicID)
+	err := s.tRepo.SetPosition(s.ctx, s.testUserID, s.testTopicID, 50)
 	s.Require().NoError(err)
 
-	p, _ := s.tRepo.GetByUserAndTopic(s.ctx, s.testUserID, s.testTopicID)
+	err = s.tRepo.ResetByTopic(s.ctx, s.testUserID, s.testTopicID)
+	s.Require().NoError(err)
+
+	p, err := s.tRepo.GetByUserAndTopic(s.ctx, s.testUserID, s.testTopicID)
+	s.Require().NoError(err)
 	s.Equal(0, p.CurrentPosition)
 }
 
@@ -141,11 +149,14 @@ func (s *ProgressRepoTestSuite) applyMigrations(dbURL string) {
 	db, err := sql.Open("pgx", dbURL)
 	s.Require().NoError(err)
 	defer db.Close()
+
 	_, b, _, _ := runtime.Caller(0)
 	projectRoot := filepath.Join(filepath.Dir(b), "../../..")
 	migrationsPath := filepath.Join(projectRoot, "migrations")
+
 	goose.SetDialect("postgres")
-	_ = goose.Up(db, migrationsPath)
+	err = goose.Up(db, migrationsPath)
+	s.Require().NoError(err)
 }
 
 func (s *ProgressRepoTestSuite) createBaseFixtures() {
@@ -153,10 +164,21 @@ func (s *ProgressRepoTestSuite) createBaseFixtures() {
 	s.testTopicID = uuid.New()
 	s.testQID = uuid.New()
 
-	_, _ = s.pool.Exec(s.ctx, `INSERT INTO users (id, telegram_id, first_name) VALUES ($1, 888, 'ProgressUser')`, s.testUserID)
-	_, _ = s.pool.Exec(s.ctx, `INSERT INTO topics (id, title, slug) VALUES ($1, 'T', 't')`, s.testTopicID)
-	_, _ = s.pool.Exec(s.ctx, `
+	_, err := s.pool.Exec(s.ctx, `
+		INSERT INTO users (id, email, first_name) 
+		VALUES ($1, 'progress_test@example.com', 'ProgressUser')
+	`, s.testUserID)
+	s.Require().NoError(err)
+
+	_, err = s.pool.Exec(s.ctx, `
+		INSERT INTO topics (id, title, slug) 
+		VALUES ($1, 'T', 't')
+	`, s.testTopicID)
+	s.Require().NoError(err)
+
+	_, err = s.pool.Exec(s.ctx, `
 		INSERT INTO questions (id, title, slug, content, level, topic_id, created_by, updated_by)
 		VALUES ($1, 'Q', 'q', '{}', 0, $2, $3, $3)
 	`, s.testQID, s.testTopicID, s.testUserID)
+	s.Require().NoError(err)
 }

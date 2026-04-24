@@ -1,34 +1,53 @@
-// Package auth provides HTTP request and response DTOs for authentication handlers.
 package auth
 
-// loginRequest represents the JSON payload for Telegram login.
+// registerRequest represents the JSON payload for a new user registration.
+type registerRequest struct {
+	Email     string  `json:"email" validate:"required,email"`
+	Password  string  `json:"password" validate:"required,min=8,max=72"`
+	FirstName string  `json:"first_name" validate:"required,min=2,max=64"`
+	LastName  *string `json:"last_name,omitempty" validate:"omitempty,min=2,max=64"`
+	Username  *string `json:"username,omitempty" validate:"omitempty,min=3,max=32"`
+}
+
+// loginRequest represents the JSON payload for authenticating a user.
 type loginRequest struct {
-	ID        int64   `json:"id" validate:"required"`         // Telegram user ID
-	FirstName string  `json:"first_name" validate:"required"` // First name
-	LastName  *string `json:"last_name,omitempty"`            // Last name (optional)
-	Username  *string `json:"username,omitempty"`             // Telegram username (optional)
-	PhotoURL  *string `json:"photo_url,omitempty"`            // Avatar URL (optional)
-	AuthDate  int64   `json:"auth_date" validate:"required"`  // Authorization timestamp
-	Hash      string  `json:"hash" validate:"required"`       // Telegram login hash
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
-// loginResponse contains the access and refresh tokens returned after login.
-type loginResponse struct {
-	AccessToken  string `json:"access_token"`  // JWT token
-	RefreshToken string `json:"refresh_token"` // Refresh token
+// verifyEmailRequest represents the payload for email verification.
+type verifyEmailRequest struct {
+	Token string `json:"token" validate:"required"`
 }
 
-// refreshRequest represents the JSON payload to refresh tokens.
+// requestResetRequest represents the payload to request a password reset email.
+type requestResetRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// resetPasswordRequest represents the payload to set a new password using a token.
+type resetPasswordRequest struct {
+	Token       string `json:"token" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=8,max=72"`
+}
+
+// yandexCallbackRequest represents the payload sent by the frontend after Yandex redirects back.
+type yandexCallbackRequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
+// refreshRequest represents the JSON payload to exchange an old refresh token for new ones.
 type refreshRequest struct {
-	RefreshToken string `json:"refresh_token" validate:"required"` // Existing refresh token
+	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
-// refreshResponse contains new access and refresh tokens.
-type refreshResponse struct {
-	AccessToken  string `json:"access_token"`  // New JWT token
-	RefreshToken string `json:"refresh_token"` // New refresh token
+// tokenResponse contains the access and refresh tokens returned after a successful login or refresh.
+type tokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
-type devLoginRequest struct {
-	UserID string `json:"user_id" validate:"required,uuid"`
+// resendVerificationRequest represents the payload to request a new verification email.
+type resendVerificationRequest struct {
+	Email string `json:"email" validate:"required,email"`
 }

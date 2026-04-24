@@ -71,8 +71,10 @@ func (s *SessionRepoTestSuite) TearDownSuite() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	if err := s.pgCont.Terminate(s.ctx); err != nil {
-		log.Fatalf("failed to terminate container: %v", err)
+	if s.pgCont != nil {
+		if err := s.pgCont.Terminate(s.ctx); err != nil {
+			log.Fatalf("failed to terminate container: %v", err)
+		}
 	}
 }
 
@@ -145,9 +147,10 @@ func (s *SessionRepoTestSuite) applyMigrations(dbURL string) {
 
 func (s *SessionRepoTestSuite) createBaseFixtures() {
 	s.testUserID = uuid.New()
+
 	_, err := s.pool.Exec(s.ctx, `
-		INSERT INTO users (id, telegram_id, username, first_name) 
-		VALUES ($1, 999999, 'session_owner', 'Owner')
+		INSERT INTO users (id, email, username, first_name) 
+		VALUES ($1, 'session_owner@example.com', 'session_owner', 'Owner')
 	`, s.testUserID)
 	s.Require().NoError(err)
 }

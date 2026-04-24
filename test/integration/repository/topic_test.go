@@ -71,8 +71,10 @@ func (s *TopicRepoTestSuite) TearDownSuite() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
-	if err := s.pgCont.Terminate(s.ctx); err != nil {
-		log.Fatalf("failed to terminate container: %v", err)
+	if s.pgCont != nil {
+		if err := s.pgCont.Terminate(s.ctx); err != nil {
+			log.Fatalf("failed to terminate container: %v", err)
+		}
 	}
 }
 
@@ -157,9 +159,9 @@ func (s *TopicRepoTestSuite) TestListRows() {
 	s.Require().NoError(err)
 
 	const insertQuestion = `
-		INSERT INTO questions (title, slug, content, level, topic_id, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`
+       INSERT INTO questions (title, slug, content, level, topic_id, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `
 	_, err = s.pool.Exec(s.ctx, insertQuestion, "Q1", "q-1", "{}", 0, t1ID, s.testUserID, s.testUserID)
 	s.Require().NoError(err)
 	_, err = s.pool.Exec(s.ctx, insertQuestion, "Q2", "q-2", "{}", 0, t1ID, s.testUserID, s.testUserID)
@@ -205,9 +207,10 @@ func (s *TopicRepoTestSuite) applyMigrations(dbURL string) {
 
 func (s *TopicRepoTestSuite) createBaseFixtures() {
 	s.testUserID = uuid.New()
+
 	_, err := s.pool.Exec(s.ctx, `
-		INSERT INTO users (id, telegram_id, username, first_name) 
-		VALUES ($1, 12345, 'tester', 'Tester')
+		INSERT INTO users (id, email, username, first_name) 
+		VALUES ($1, 'topic_tester@example.com', 'tester', 'Tester')
 	`, s.testUserID)
 	s.Require().NoError(err)
 }
