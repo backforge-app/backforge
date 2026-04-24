@@ -7,10 +7,15 @@ package mailer
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"mime"
 	"net/smtp"
 	"strings"
 )
+
+// ErrCRLFInjection is returned when newline characters are detected in email headers.
+var ErrCRLFInjection = errors.New("crlf injection detected in email headers")
 
 // Config holds the SMTP configuration required to send emails.
 type Config struct {
@@ -38,11 +43,21 @@ func New(cfg Config) *Mailer {
 // It respects the provided context, allowing for timeout or cancellation
 // during the SMTP transmission.
 func (m *Mailer) SendHTML(ctx context.Context, to, subject, htmlBody string) error {
-	// 1. Construct standard MIME headers for HTML email.
+	// 1. Sanitize inputs to prevent Email Header Injection (CRLF Injection).
+	// Untrusted input in 'to' or 'FromAddress' could allow an attacker to inject arbitrary SMTP headers.
+	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(m.cfg.FromAddress, "\r\n") {
+		return ErrCRLFInjection
+	}
+
+	// 2. Construct standard MIME headers for HTML email.
 	headers := make(map[string]string)
 	headers["From"] = m.cfg.FromAddress
 	headers["To"] = to
-	headers["Subject"] = subject
+
+	// Use mime.QEncoding to safely encode the subject. This ensures Unicode
+	// characters are supported and naturally neutralizes CRLF injection in the subject.
+	headers["Subject"] = mime.QEncoding.Encode("utf-8", subject)
+
 	headers["MIME-Version"] = "1.0"
 	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
 
@@ -59,7 +74,7 @@ func (m *Mailer) SendHTML(ctx context.Context, to, subject, htmlBody string) err
 	addr := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
 	auth := smtp.PlainAuth("", m.cfg.Username, m.cfg.Password, m.cfg.Host)
 
-	// 2. Execute sending in a goroutine to support context cancellation.
+	// 3. Execute sending in a goroutine to support context cancellation.
 	// net/smtp.SendMail does not natively support context, so we wrap it.
 	ch := make(chan error, 1)
 	go func() {
